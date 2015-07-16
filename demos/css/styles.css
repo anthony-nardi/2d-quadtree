@@ -1,0 +1,51 @@
+button {
+	position: absolute;
+	zoom: 1.5;
+	width: 200px;
+	height: 50px;
+	font-size: 120%;
+}
+
+#boundaries {
+
+}
+
+#orphans {
+	top: 70px;
+}
+
+#children {
+	top: 140px;
+}
+
+#info {
+	position: absolute;
+	right: 100px;
+	top: 0;
+	zoom:1.5;
+}
+
+#info div {
+	margin-top: 10px;
+}
+
+button span {
+	pointer-events:none;
+}
+
+.indent {
+	text-indent: 22px;
+}
+
+#comparisons {
+	top:210px;
+}
+
+#collisions {
+	top:280px;
+}
+
+#clear {
+	top:350px;
+}
+

@@ -1,0 +1,21 @@
+{
+  "name": "quadtree",
+  "version": "1.0.0",
+  "description": "Quadtree for games and simulations.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Anthony Nardi",
+  "license": "ISC",
+  "devDependencies": {
+    "browserify": "^10.2.0",
+    "grunt": "^0.4.5",
+    "grunt-browserify": "^3.8.0",
+    "grunt-contrib-less": "^1.0.1",
+    "grunt-contrib-watch": "^0.6.1"
+  },
+  "dependencies": {
+    "underscore": "^1.8.3"
+  }
+}

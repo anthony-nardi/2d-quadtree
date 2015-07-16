@@ -1,0 +1,595 @@
+'use strict';
+
+var _ = window._ = require('underscore');
+
+var DEFAULT_MAX_CHILDREN = 4,
+    DEFAULT_DEPTH        = 4,
+    DEFAULT_WIDTH        = 1000,
+    DEFAULT_HEIGHT       = 1000,
+    NORTH_WEST           = 1,
+    NORTH_EAST           = 2,
+    SOUTH_WEST           = 4,
+    SOUTH_EAST           = 8;           
+
+var rectPrototype = {
+
+  'move': function (x, y) {
+  
+    this.x = x;
+    this.y = y;
+    
+    if (this.parent.orphans.indexOf(this) !== -1 || !isWithinBounds(this.parent, this)) {
+      this.parent.remove(this);
+      this.parent.insert(this);
+    }
+
+  }
+
+};
+
+function Quadtree (options) {
+  
+  options = options || {};
+
+	this.maxChildren = options.maxChildren || DEFAULT_MAX_CHILDREN;
+	this.depth       = options.depth       || DEFAULT_DEPTH;
+  this.height      = options.height      || DEFAULT_HEIGHT;
+  this.width       = options.width       || DEFAULT_WIDTH;
+  this.halfHeight  = this.height / 2;
+  this.halfWidth   = this.width  / 2;
+  this.x           = options.x || 0;
+  this.y           = options.y || 0;
+  this.parent      = options.parent || null;
+  this.children    = [];
+  this.orphans     = [];
+  this.isLeaf      = true;
+  this.quadrant    = options.quadrant || (NORTH_WEST + NORTH_EAST + SOUTH_WEST + SOUTH_EAST);
+}
+
+/**
+ * 
+ * [insert Inserts an object into the quadTree]
+ * @param  {Object} object [An arbitrary object with rectangle properties]
+ * @return {[type]}        [description]
+ */
+Quadtree.prototype.insert = function (object) {
+
+  var numberOfChildren = this.children.length;
+  
+  if (!hasRectProps(object)) {
+    throw 'Inserting an object into the Quadtree requires a height, width, x, and y property'; 
+  }
+ 
+  if (!object.move) {
+    _.extend(object, rectPrototype);
+  }
+
+  if (!isWithinBounds(this, object)) {
+    if (this.parent) {
+      this.parent.insert(object);
+      return;
+    } else {
+      forceObjectWithinBounds(object, this);
+      console.log('Object is outside the bounds this Quadtree');      
+    }
+  }
+
+  object.parent   = this;
+  object.quadrant = undefined;
+
+  // This quadTree does not contain quadTrees
+  if (this.isLeaf) {
+    
+    this.children.push(object);
+
+    if (this.children.length > this.maxChildren && this.depth) {
+      console.log('Quadtree must divide because the number of children exceeds ' + this.maxChildren);
+      this.divide();
+      return;
+    }
+
+    setQuadrant(object, this);
+  
+  // This quadTree contains quadTrees
+  // We should check if the object we are inserting can be completely contained within
+  // one of these quadTrees.  If it can't, it must be an orphan.
+  } else {
+
+    for (var i = 0; i < numberOfChildren; i++) {
+      if (isWithinBounds(this.children[i], object)) {
+        this.children[i].insert(object);
+        console.log('Object fits completely within a child Quadtree.');
+        return;
+      }
+    }
+
+    // Object does not fit within any of the sub-quadTrees.  It's an orphan.
+
+    console.log('Object is an orphan of %o', this);
+
+    setQuadrant(object, this);
+    this.orphans.push(object);
+
+  }
+
+};
+
+/**
+ * [remove removes the object  and collapses the quadTree]
+ * @param  {Object} object [Item that was inserted into the quadTree]
+ * @return {[type]}        [description]
+ */
+Quadtree.prototype.remove = function (object) {
+
+  var parent   = object.parent,
+      children = parent.children,
+      orphans  = parent.orphans;
+
+  if (_.contains(children, object)) {
+    children.splice(children.indexOf(object), 1);
+  } else if (_.contains(orphans, object)) {
+    orphans.splice(orphans.indexOf(object), 1);
+  } else {
+    throw 'Object not found in quadTree when attempting to remove';
+  }
+  parent.collapse();
+};
+
+/**
+ * [divide partitions the quadTree into 4 equal sized quadTrees.
+ *  It also re-inserts all of the children that the leaf contained.
+ * ]
+ * @return {[type]} [description]
+ */
+Quadtree.prototype.divide = function () {
+
+  var children    = this.children,
+      options     = {
+                      'depth' : this.depth - 1,
+                      'width' : this.width  / 2,
+                      'height': this.height / 2,
+                      'parent': this
+                    };
+
+  this.isLeaf = false;
+
+  this.children = [
+    new Quadtree(_.extend(options, {
+      'x'       : this.x,
+      'y'       : this.y,
+      'quadrant': NORTH_WEST
+    })),
+    new Quadtree(_.extend(options, {
+      'x'       : this.x + this.halfWidth,
+      'y'       : this.y,
+      'quadrant': NORTH_EAST
+    })),
+    new Quadtree(_.extend(options, {
+      'x'       : this.x,
+      'y'       : this.y + this.halfHeight,
+      'quadrant': SOUTH_WEST
+    })),
+    new Quadtree(_.extend(options, {
+      'x'       : this.x + this.halfWidth,
+      'y'       : this.y + this.halfHeight,
+      'quadrant': SOUTH_EAST
+    }))
+  ];
+
+  for (var i = 0, l = children.length; i < l; i++) {
+    this.insert(children[i]);
+  }
+
+};
+
+/**
+ * [collapse Collapses the quadTree]
+ * @return {[type]} [description]
+ */
+Quadtree.prototype.collapse = function () {
+
+  var allOrphansAndChildren;
+
+  if (this.getOrphanAndChildCount() <= this.maxChildren) {
+
+    if (this.parent && this.parent.getOrphanAndChildCount() <= this.maxChildren) {
+
+      this.parent.collapse();
+      
+    } else {
+
+      allOrphansAndChildren = this.getOrphansAndChildren();
+      
+      this.orphans  = [];
+      this.children = [];
+      this.isLeaf   = true;
+      
+      for (var i = 0; i < allOrphansAndChildren.length; i++) {
+        this.insert(allOrphansAndChildren[i]);
+      }
+    
+    }
+  }
+
+};
+
+/**
+ * [getOrphanCount returns the number of orphans in the quadTree]
+ * @return {Array} [number of orphans in the quadTree]
+ */
+Quadtree.prototype.getOrphanCount = function () {
+  
+  var numberOfOrphans  = this.orphans.length,
+      numberOfChildren = this.children.length, 
+      count            = numberOfOrphans;
+
+  if (this.isLeaf) {
+    if (count !== 0) {
+      throw 'Why does this leaf have orphans?!';
+    }
+    return count; // should be 0.
+  } else {
+    for (var i = 0; i < numberOfChildren; i++) {
+      count += this.children[i].getOrphanCount();
+    }
+  }
+
+  return count;
+
+};
+
+/**
+ * [getChildCount returns the number of children in the quadTree]
+ * @return {Integer} [number of children in the quadTree]
+ */
+Quadtree.prototype.getChildCount = function () {
+
+  var count            = 0,
+      numberOfChildren = this.children.length;
+
+  if (!this.isLeaf) {
+    for (var i = 0; i < numberOfChildren; i++) {
+      count += this.children[i].getChildCount();
+    }
+  } else {
+    count += numberOfChildren;
+  }
+
+  return count;
+
+};
+
+Quadtree.prototype.getOrphanAndChildCount = function () {
+  return this.getOrphanCount() + this.getChildCount();
+};
+
+/**
+ * [getOrphans return all the orphans of the quadTree]
+ * @return {Array} [all the orphans of the quadTree]
+ */
+Quadtree.prototype.getOrphans = function () {
+
+  var orphans = [];
+
+  if (!this.isLeaf) {
+    
+    orphans = this.orphans;
+
+    for (var i = 0; i < this.children.length; i++) {
+      orphans = orphans.concat(this.children[i].getOrphans());
+    }
+
+  }
+
+  return orphans;
+
+};
+
+/**
+ * [getChildren returns an array of all the children of the quadTree]
+ * @return {Array} [all the children of the quadTree]
+ */
+Quadtree.prototype.getChildren = function () {
+  
+  var children = [];
+
+  if (this.isLeaf) {
+    return this.children;
+  } else {
+    for (var i = 0; i < this.children.length; i++) {
+      children = children.concat(this.children[i].getChildren());
+    }
+  }
+
+  return children;
+};
+
+/**
+ * [getOrphansAndChildren returns an array of all the children and orphans of the quadTree]
+ * @return {Array} [all the children and orphans of the quadTree]
+ */
+Quadtree.prototype.getOrphansAndChildren = function () {
+  return this.getChildren().concat(this.getOrphans());
+};
+
+/**
+ * [getQuadtreeCount returns the number of divisions within the quadtree.]
+ * @return {Integer} [The number of divisions within the quadtree.]
+ */
+Quadtree.prototype.getQuadtreeCount = function () {
+  
+  var count = this.children.length;
+  
+  if (this.isLeaf) {
+    return 0;
+  }
+
+  for (var i = 0; i < this.children.length; i++) {
+    count += this.children[i].getQuadtreeCount();
+  }
+
+  return count;
+
+};
+
+Quadtree.prototype.getParentOrphanComparisons = function () {
+  
+  var comparisonList  = [],
+      orphans         = this.parent && this.parent.orphans;
+
+  if (!orphans) {
+    return comparisonList;
+  }
+
+  for (var i = 0; i < orphans.length; i++) {
+    if ((orphans[i].quadrant & this.quadrant)) {
+      comparisonList.push(orphans[i]);
+    }
+  }
+
+  return comparisonList.concat(this.parent.getParentOrphanComparisons());
+};
+
+Quadtree.prototype.getCollisions = function (rect) {
+  
+  if (!hasRectProps(rect)) {
+    throw 'Collsion must be a rect';
+  }
+
+  return getCollisions(this.getComparisons(rect), rect);
+
+};
+
+// This might be an area to optimized.  A rectangle that is an orphans of the parent-most quadtree
+// that overlaps all quadrants will be the same as a brute force collision detector.
+Quadtree.prototype.getOrphansAndChildrenInQuadrants = function (rect) {
+  
+  var orphansAndChildren = [],
+      quadrant           = rect.quadrant;
+
+  if (quadrant & NORTH_WEST) {
+    orphansAndChildren = orphansAndChildren.concat(this.children[0].getOrphansAndChildren());
+  }
+  
+  if (quadrant & NORTH_EAST) {
+    orphansAndChildren = orphansAndChildren.concat(this.children[1].getOrphansAndChildren());
+  }
+
+  if (quadrant & SOUTH_WEST) {
+    orphansAndChildren = orphansAndChildren.concat(this.children[2].getOrphansAndChildren());
+  }
+
+  if (quadrant & SOUTH_EAST) {
+    orphansAndChildren = orphansAndChildren.concat(this.children[3].getOrphansAndChildren());
+  }
+
+  return orphansAndChildren;
+
+};
+
+Quadtree.prototype.getComparisons = function (rect) {
+
+  if (!hasRectProps(rect)) {
+    throw 'Collsion must be a rect';
+  }
+
+  if (!rect.quadrant) {
+    throw 'Rect does not have a quadrant property';
+  }
+
+  var comparisonList          = rect.parent.isLeaf ? rect.parent.getChildren() : rect.parent.getOrphansAndChildrenInQuadrants(rect),
+      directOrphans           = rect.parent.orphans,
+      parentOrphanComparisons = rect.parent.getParentOrphanComparisons(rect); 
+
+  for (var i = 0; i < directOrphans.length; i++) {
+    if ((directOrphans[i].quadrant & rect.quadrant)) {
+      comparisonList.push(directOrphans[i]);
+    }
+  }
+
+  comparisonList = comparisonList.concat(parentOrphanComparisons);
+
+  if (_.contains(comparisonList, rect)) {
+    comparisonList.splice(comparisonList.indexOf(rect), 1);    
+  }
+
+  return comparisonList;
+
+};
+
+Quadtree.prototype.getBruteForceCollisions = function (rect) {
+  
+  if (!hasRectProps(rect)) {
+    throw 'Collsion must be a rect';
+  }
+
+  var comparisonList,
+      currentQuadTree = this;
+
+  while (currentQuadTree.parent) {
+    currentQuadTree = currentQuadTree.parent;
+  }
+
+  comparisonList = currentQuadTree.getOrphansAndChildren();
+
+  if (_.contains(comparisonList, rect)) {
+    comparisonList.splice(comparisonList.indexOf(rect), 1);    
+  }
+
+  return getCollisions(comparisonList, rect);
+
+};
+
+// Helper functions
+
+/**
+ * [setQuadrant sets the overlapping quadrants (quadtrees) given an object]
+ * @param {Object} object   [A rectangle that is inserted in the quadtree]
+ * @param {Object} quadtree [A quadtree]
+ */
+function setQuadrant (object, quadtree) {
+
+  if (quadtree.isLeaf) {
+
+    if (quadtree.parent) {
+      object.quadrant = (isIntersecting(quadtree.parent.children[0], object) * NORTH_WEST) +
+                        (isIntersecting(quadtree.parent.children[1], object) * NORTH_EAST) +
+                        (isIntersecting(quadtree.parent.children[2], object) * SOUTH_WEST) +
+                        (isIntersecting(quadtree.parent.children[3], object) * SOUTH_EAST);      
+    } else {
+      object.quadrant = 15;
+    }
+
+  } else {
+
+    object.quadrant = (isIntersecting(quadtree.children[0], object) * NORTH_WEST) +
+                      (isIntersecting(quadtree.children[1], object) * NORTH_EAST) +
+                      (isIntersecting(quadtree.children[2], object) * SOUTH_WEST) +
+                      (isIntersecting(quadtree.children[3], object) * SOUTH_EAST);
+  
+  }
+}
+
+/**
+ * [hasRectProps determines if the object has the necessary properties to be considered a rectangle]
+ * @param  {Object}  object [The object questioned for rect props]
+ * @return {Boolean}        [True if it is a rectangle]
+ */
+function hasRectProps (object) {
+  return typeof object.width !== 'undefined' && object.height !== 'undefined' && object.x !== 'undefined' && object.y !== 'undefined';
+}
+
+/**
+ * [getBounds returns the bounds of a rectangle]
+ * @param  {Object} r [x, y, width, height]
+ * @return {Object}   [left, right, top, bottom]
+ */
+function getBounds (r) {
+  return {
+    'left'  : r.x,
+    'right' : r.x + r.width,
+    'top'   : r.y,
+    'bottom': r.y + r.height
+  };
+}
+
+/**
+ * [isWithinBounds retuns true if rect2 is completely within rect1]
+ * @param  {Object}  r1 [x, y, width, height]
+ * @param  {Object}  r2 [x, y, width, height]
+ * @return {Boolean}    [true if rect2 is completely within rect1]
+ */
+function isWithinBounds (r1, r2) {
+
+  var r1Bounds = getBounds(r1),
+      r2Bounds = getBounds(r2);
+      
+  return (r2Bounds.left   >= r1Bounds.left  &&
+          r2Bounds.right  <= r1Bounds.right &&
+          r2Bounds.top    >= r1Bounds.top   &&
+          r2Bounds.bottom <= r1Bounds.bottom);
+}
+
+/**
+ * [isIntersecting returns true if two rectangles intersect]
+ * @param  {Object}  r1 [rectangle]
+ * @param  {Object}  r2 [rectangle]
+ * @return {Boolean}    [True if two rectangles isIntersecting]
+ * @diagram
+ *  
+ *   * * * * * *
+ *   *   r2    *
+ *   *       * * * *
+ *   * * * * * *   *
+ *           *  r1 *
+ *           * * * *
+ *
+ *  * * * * * * 
+ *  *    r2   *
+ *  *         *   * * * *
+ *  * * * * * *   *  r1 *
+ *                *     *
+ *                * * * * 
+ */
+function isIntersecting (r1, r2) {
+
+  var r1Bounds = getBounds(r1),
+      r2Bounds = getBounds(r2);
+      
+  return (r1Bounds.left   < r2Bounds.right  &&
+          r1Bounds.right  > r2Bounds.left   &&
+          r1Bounds.top    < r2Bounds.bottom &&
+          r1Bounds.bottom > r2Bounds.top);
+
+}
+
+function getCollisions (comparisonList, rect) {
+
+  var collisionList = [];
+  
+  for (var i = 0; i < comparisonList.length; i++) {
+    if (isIntersecting(comparisonList[i], rect)) {
+      collisionList.push(comparisonList[i]);
+    }
+  }
+
+  return collisionList;
+
+}
+
+function forceObjectWithinBounds (object, rect) {
+
+  var objectBounds    = getBounds(object),
+      containerBounds = getBounds(rect),
+      isTooFarLeft    = objectBounds.left   < containerBounds.left,
+      isTooFarRight   = objectBounds.left   > containerBounds.right,
+      isTooFarAbove   = objectBounds.top    < containerBounds.top,
+      isTooFarBelow   = objectBounds.top    > containerBounds.bottom; 
+
+  if (isTooFarLeft) {
+    while (object.x < containerBounds.left) {
+      object.x = containerBounds.right + object.x;
+    }
+  }
+
+  if (isTooFarRight) {
+    while (object.x > containerBounds.right) {
+      object.x = containerBounds.right - object.x;
+    }
+  }
+
+  if (isTooFarAbove) {
+    while (object.y < containerBounds.top) {
+      object.y = containerBounds.bottom + object.y;
+    }
+  }
+  
+  if (isTooFarBelow) {
+    while (object.y > containerBounds.bottom) {
+      object.y = containerBounds.bottom - object.y;
+    }
+  }  
+
+}
+
+module.exports = Quadtree;

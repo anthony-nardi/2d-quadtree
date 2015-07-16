@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Quadtree</title>
+    	<script src="//localhost:35729/livereload.js"></script>
+		<script src="js/bundle.js"></script>
+		<link rel="stylesheet" type="text/css" href="css/styles.css">
+	</head>
+	<body>
+		<button id='boundaries'><span>Hide</span> boundaries</button>
+		<button id='orphans'><span>Hide</span> orphans</button>
+		<button id='children'><span>Hide</span> children</button>
+		<button id='comparisons'><span>Show</span> comparisons</button>
+		<button id='collisions'><span>Show</span> collisions</button>
+		<button id='clear'><span>Clear</span></button>
+		<canvas id='canvas' oncontextmenu="return false;" style='margin:0 auto;display:block;'></canvas>
+		<div id='info'>
+			<h2>Info</h2>
+			<div>Number of QuadTrees: <span id='info_quadtrees'></span></div>
+			<div>Number of orphans  : <span id='info_orphans'></span></div>
+			<div>Number of children : <span id='info_children'></span></div>
+			<h3>Collisions of last rectangle</h3>
+			<div>
+			    <h5>Brute force :</h5>
+			    <div id='info_brute_force_collisions'  class='indent'></div>
+			    <div id='info_brute_force_comparisons' class='indent'></div>
+			    <div id='info_brute_force_time'        class='indent'></div>
+			</div>
+			<div>
+				<h5>Optimized :</h5>
+				<div id='info_optimized_collisions'  class='indent'></div>
+				<div id='info_optimized_comparisons' class='indent'></div>
+				<div id='info_optimized_time'        class='indent'></div>
+			</div>
+		</div>
+	</body>
+</html>
