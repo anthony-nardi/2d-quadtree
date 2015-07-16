@@ -40,7 +40,7 @@ function drawChildren () {
   for (var i = 0; i < allChildren.length; i++) {
     item = allChildren[i];
     ctx.strokeStyle = item === lastRect ? '#fff' : '#0cd';
-    ctx.strokeRect(item.x, item.y, item.width, item.height);
+    ctx.strokeRect(item.x + map.halfWidth - item.width / 2, item.y + map.halfHeight - item.height / 2, item.width, item.height);
   }
 
 }
@@ -55,7 +55,7 @@ function drawOrphans () {
   for (var i = 0; i < allOrphans.length; i++) {
     item = allOrphans[i];
     ctx.strokeStyle = item === lastRect ? '#fff' : '#da0';
-    ctx.strokeRect(item.x, item.y, item.width, item.height);
+    ctx.strokeRect(item.x + map.halfWidth - item.width / 2, item.y + map.halfHeight - item.height / 2, item.width, item.height);
   }
 }
 
@@ -67,9 +67,9 @@ function drawQuadtreeBoundaries (quadTree) {
   
   ctx.strokeStyle = '#cf2';
   ctx.lineWidth   = '4';
-  
-  ctx.strokeRect(quadTree.x, quadTree.y, quadTree.width, quadTree.height);
-  
+
+  ctx.strokeRect(quadTree.x + map.halfWidth - quadTree.halfWidth, quadTree.y + map.halfHeight - quadTree.halfHeight, quadTree.width, quadTree.height);
+
   if (!quadTree.isLeaf) {
     for (var i = 0; i < l; i++) {
       drawQuadtreeBoundaries(quadTree.children[i]);
@@ -88,7 +88,7 @@ function drawComparisons () {
   
   for (var i = 0; i < comparisons.length; i++) {
     item = comparisons[i];
-    ctx.strokeRect(item.x, item.y, item.width, item.height);
+    ctx.strokeRect(item.x + map.halfWidth - item.width / 2, item.y + map.halfHeight - item.height / 2, item.width, item.height);
   }
 
 }
@@ -104,7 +104,7 @@ function drawCollisions () {
   
   for (var i = 0; i < collisions.length; i++) {
     item = collisions[i];
-    ctx.strokeRect(item.x, item.y, item.width, item.height);
+    ctx.strokeRect(item.x + map.halfWidth - item.width / 2, item.y + map.halfHeight - item.height / 2, item.width, item.height);
   }
 
 }
@@ -124,7 +124,7 @@ function removeRectFromQuad (event) {
   
   var x             = event.offsetX,
       y             = event.offsetY,
-      clickedPoint  = {'x': x, 'y': y, 'width': 1, 'height': 1},
+      clickedPoint  = {'x': x + map.halfWidth, 'y': y + map.halfHeight, 'width': 1, 'height': 1},
       collisionList = map.getBruteForceCollisions(clickedPoint);
   for (var i = 0; i < collisionList.length; i++) {
     collisionList[i].parent.remove(collisionList[i]);
@@ -338,8 +338,8 @@ function startDrag (event) {
     return;
   }
   var canvas = document.getElementById('canvas');
-  lastMouseX = event.offsetX;
-  lastMouseY = event.offsetY;
+  lastMouseX = event.offsetX - map.halfWidth;
+  lastMouseY = event.offsetY - map.halfHeight;
   canvas.addEventListener('mousemove', continueDrag);
   lastRect = {
     'x'     : lastMouseX,
@@ -371,10 +371,10 @@ function endDrag () {
 }
 
 function continueDrag (event) {
-  lastRect.width  = Math.abs(event.offsetX - lastMouseX) * 2;
-  lastRect.height = Math.abs(event.offsetY - lastMouseY) * 2;
-  lastRect.x = lastMouseX - (lastRect.width  / 2);
-  lastRect.y = lastMouseY - (lastRect.height / 2);
+  lastRect.width  = Math.abs(event.offsetX - map.halfWidth  - lastMouseX) * 2;
+  lastRect.height = Math.abs(event.offsetY - map.halfHeight - lastMouseY) * 2;
+  lastRect.x = lastMouseX;
+  lastRect.y = lastMouseY;
   if (!lastRect.width || !lastRect.height) {
     return;
   }

@@ -1483,35 +1483,37 @@ Quadtree.prototype.remove = function (object) {
  */
 Quadtree.prototype.divide = function () {
 
-  var children    = this.children,
-      options     = {
-                      'depth' : this.depth - 1,
-                      'width' : this.width  / 2,
-                      'height': this.height / 2,
-                      'parent': this
-                    };
+  var children      = this.children,
+      quarterWidth  = this.width  / 4,
+      quarterHeight = this.height / 4,
+      options       = {
+                        'depth' : this.depth - 1,
+                        'width' : this.width  / 2,
+                        'height': this.height / 2,
+                        'parent': this
+                      };
 
   this.isLeaf = false;
 
   this.children = [
     new Quadtree(_.extend(options, {
-      'x'       : this.x,
-      'y'       : this.y,
+      'x'       : this.x - quarterWidth,
+      'y'       : this.y - quarterHeight,
       'quadrant': NORTH_WEST
     })),
     new Quadtree(_.extend(options, {
-      'x'       : this.x + this.halfWidth,
-      'y'       : this.y,
+      'x'       : this.x + quarterWidth,
+      'y'       : this.y - quarterHeight,
       'quadrant': NORTH_EAST
     })),
     new Quadtree(_.extend(options, {
-      'x'       : this.x,
-      'y'       : this.y + this.halfHeight,
+      'x'       : this.x - quarterWidth,
+      'y'       : this.y + quarterHeight,
       'quadrant': SOUTH_WEST
     })),
     new Quadtree(_.extend(options, {
-      'x'       : this.x + this.halfWidth,
-      'y'       : this.y + this.halfHeight,
+      'x'       : this.x + quarterWidth,
+      'y'       : this.y + quarterHeight,
       'quadrant': SOUTH_EAST
     }))
   ];
@@ -1826,10 +1828,10 @@ function hasRectProps (object) {
  */
 function getBounds (r) {
   return {
-    'left'  : r.x,
-    'right' : r.x + r.width,
-    'top'   : r.y,
-    'bottom': r.y + r.height
+    'left'  : r.x - r.width  / 2,
+    'right' : r.x + r.width  / 2,
+    'top'   : r.y - r.height / 2,
+    'bottom': r.y + r.height / 2
   };
 }
 
@@ -1908,25 +1910,25 @@ function forceObjectWithinBounds (object, rect) {
 
   if (isTooFarLeft) {
     while (object.x < containerBounds.left) {
-      object.x = containerBounds.right + object.x;
+      object.x = containerBounds.right + object.x + rect.halfWidth;
     }
   }
 
   if (isTooFarRight) {
     while (object.x > containerBounds.right) {
-      object.x = containerBounds.right - object.x;
+      object.x = containerBounds.left + object.x - rect.halfWidth;
     }
   }
 
   if (isTooFarAbove) {
     while (object.y < containerBounds.top) {
-      object.y = containerBounds.bottom + object.y;
+      object.y = containerBounds.bottom + object.y + rect.halfHeight;
     }
   }
   
   if (isTooFarBelow) {
     while (object.y > containerBounds.bottom) {
-      object.y = containerBounds.bottom - object.y;
+      object.y = containerBounds.top + object.y - rect.halfHeight;
     }
   }  
 
