@@ -124,8 +124,9 @@ function removeRectFromQuad (event) {
   
   var x             = event.offsetX,
       y             = event.offsetY,
-      clickedPoint  = {'x': x + map.halfWidth, 'y': y + map.halfHeight, 'width': 1, 'height': 1},
+      clickedPoint  = {'x': x - map.halfWidth, 'y': y - map.halfHeight, 'width': 1, 'height': 1},
       collisionList = map.getBruteForceCollisions(clickedPoint);
+      
   for (var i = 0; i < collisionList.length; i++) {
     collisionList[i].parent.remove(collisionList[i]);
   }

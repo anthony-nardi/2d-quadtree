@@ -1,5 +1,7 @@
 'use strict';
 
+var _ = require('underscore');
+
 module.exports = (function () {
 
   var createVector = require('../util/math/vector'),
@@ -28,6 +30,7 @@ module.exports = (function () {
     'isAsteroid': true,
 
     'removeNextUpdate': false,
+    'isRemoved' : false,
 
     'sim'  : clock.UPDATE_BUFFER,
 
@@ -37,14 +40,6 @@ module.exports = (function () {
         this.removeNextUpdate = true;
       if (this.breaks === 0) {
       } else {
-
-        // quadTree.insert(init({
-        //   'width': this.width * 0.6,
-        //   'height': this.height * 0.6,
-        //   'speed': this.speed * 0.9,
-        //   'angle': this.angle.rotate(Math.random()),
-        //   'breaks': this.breaks - 1
-        // }));
 
         quadTree.insert(create({
           'x': this.x,
@@ -79,9 +74,13 @@ module.exports = (function () {
 
     'update': function () {
 
-      if (this.removeNextUpdate) {
+      if (this.removeNextUpdate && !this.isRemoved) {
+        this.isRemoved = true;
+ 
         this.off('update');
        this.remove();
+       this.removed = true;
+       return;
       }
 
       this.add(this.angle.normalize().mult(this.speed / this.sim));
@@ -91,17 +90,17 @@ module.exports = (function () {
     },
 
     'render': function (ctx, viewport) {
-      ctx.strokeStyle = this.color;
+      ctx.fillStyle = this.color;
       ctx.lineWidth = this.lineWidth * viewport.scale;
-      ctx.strokeRect(-this.width * viewport.scale / 2, -this.height* viewport.scale / 2, this.width * viewport.scale, this.height * viewport.scale);
+      ctx.fillRect(-this.width * viewport.scale / 2, -this.height* viewport.scale / 2, this.width * viewport.scale, this.height * viewport.scale);
     }
 
   };
 
   function init(newBox) {
-console.log(newBox)
-    newBox.extend(createVector(newBox.x, newBox.y));
-    newBox.angle.extend(createVector(newBox.angle.x, newBox.angle.y));
+
+    _.extend(newBox, createVector(newBox.x, newBox.y));
+    _.extend(newBox.angle, createVector(newBox.angle.x, newBox.angle.y));
     newBox.on('update', newBox.update);
 
     return newBox;
@@ -109,8 +108,8 @@ console.log(newBox)
   }
 
   function create (config) {
-    return init(Object.create(boxPrototype).extend(config));
-  };
+    return init(_.extend(Object.create(boxPrototype), config));
+  }
 
   return create;
 

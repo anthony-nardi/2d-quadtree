@@ -74,8 +74,7 @@ module.exports = (function () {
 
           newBullet.onCollision = function () {
             that.bullets.splice(that.bullets.indexOf(newBullet, 1));
-            this.off('update');
-            newBullet.remove();
+            this.removeNextUpdate = true;
           };
 
           this.bullets.push(this.quadTree.insert(newBullet));

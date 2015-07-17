@@ -1,5 +1,5 @@
 'use strict';
-
+var _ = require('underscore');
 module.exports = (function () {
 
   var createVector  = require('../util/math/vector'),
@@ -18,14 +18,22 @@ module.exports = (function () {
       'range'       : 400,
       'isBullet'    : true,
       'traveled'    : 0,
+      'isRemoved'   : false,
       'sim'         : clock.UPDATE_BUFFER,
+      'removeNextUpdate': false,
       'render' : function (ctx, viewport) {
         ctx.fillStyle = this.color;
         ctx.fillRect(-this.width * viewport.scale / 2, -this.height* viewport.scale / 2, this.width * viewport.scale, this.height * viewport.scale);
       },
       'update':function () {
-
-        var collidesList = this.collidesList();
+        if (this.removeNextUpdate && !this.isRemoved) {
+          this.isRemoved = true;
+          this.off('update');
+         this.remove();
+         console.log('remove bullet')
+         return;
+        }
+        var collidesList = this.getCollisions();
 
         for (var i = 0; i < collidesList.length; i += 1) {
           if (collidesList[i].isAsteroid) {
@@ -44,16 +52,16 @@ module.exports = (function () {
 
   function init(newBullet) {
 
-    newBullet.extend(createVector(newBullet.x, newBullet.y));
-    newBullet.angle.extend(createVector(newBullet.angle.x, newBullet.angle.y));
-    newBullet.velocity.extend(createVector());
+    _.extend(newBullet, createVector(newBullet.x, newBullet.y));
+    _.extend(newBullet.angle, createVector(newBullet.angle.x, newBullet.angle.y));
+    _.extend(newBullet.velocity, createVector());
     newBullet.on('update', newBullet.update);
 
     return newBullet;
   }
 
   return function (config) {
-    return init(Object.create(bulletPrototype).extend(config));
+    return init(_.extend(Object.create(bulletPrototype), config));
   };
 
 }());

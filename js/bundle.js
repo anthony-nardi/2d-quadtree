@@ -47,6 +47,14 @@ var rectPrototype = {
       this.parent.insert(this);
     }
 
+  },
+
+  'getCollisions': function () {
+    return this.parent.getCollisions(this);
+  },
+
+  'remove': function () {
+    this.parent.remove(this);
   }
 
 };
@@ -94,7 +102,7 @@ Quadtree.prototype.insert = function (object) {
       return;
     } else {
       forceObjectWithinBounds(object, this);
-      console.log('Object is outside the bounds this Quadtree');      
+      // console.log('Object is outside the bounds this Quadtree');      
     }
   }
 
@@ -105,14 +113,14 @@ Quadtree.prototype.insert = function (object) {
   if (this.isLeaf) {
     
     this.children.push(object);
+    setQuadrant(object, this);
 
     if (this.children.length > this.maxChildren && this.depth) {
-      console.log('Quadtree must divide because the number of children exceeds ' + this.maxChildren);
+      // console.log('Quadtree must divide because the number of children exceeds ' + this.maxChildren);
       this.divide();
       return;
     }
 
-    setQuadrant(object, this);
   
   // This quadTree contains quadTrees
   // We should check if the object we are inserting can be completely contained within
@@ -122,19 +130,19 @@ Quadtree.prototype.insert = function (object) {
     for (var i = 0; i < numberOfChildren; i++) {
       if (isWithinBounds(this.children[i], object)) {
         this.children[i].insert(object);
-        console.log('Object fits completely within a child Quadtree.');
+        // console.log('Object fits completely within a child Quadtree.');
         return;
       }
     }
 
     // Object does not fit within any of the sub-quadTrees.  It's an orphan.
 
-    console.log('Object is an orphan of %o', this);
+    // console.log('Object is an orphan of %o', this);
 
     setQuadrant(object, this);
     this.orphans.push(object);
 
-  }
+  }    
 
 };
 
@@ -145,17 +153,23 @@ Quadtree.prototype.insert = function (object) {
  */
 Quadtree.prototype.remove = function (object) {
 
-  var parent   = object.parent,
-      children = parent.children,
-      orphans  = parent.orphans;
+  var parent    = object.parent,
+      children  = parent.children,
+      orphans   = parent.orphans,
+      newParent = parent;
 
   if (_.contains(children, object)) {
     children.splice(children.indexOf(object), 1);
   } else if (_.contains(orphans, object)) {
     orphans.splice(orphans.indexOf(object), 1);
   } else {
+    debugger;
     throw 'Object not found in quadTree when attempting to remove';
   }
+  while (newParent.parent) {
+    newParent = newParent.parent;
+  }
+  object.parent = newParent;
   parent.collapse();
 };
 
@@ -206,6 +220,7 @@ Quadtree.prototype.divide = function () {
     this.insert(children[i]);
   }
 
+    
 };
 
 /**
@@ -214,30 +229,36 @@ Quadtree.prototype.divide = function () {
  */
 Quadtree.prototype.collapse = function () {
 
-  var allOrphansAndChildren;
-
-  if (this.getOrphanAndChildCount() <= this.maxChildren) {
-
-    if (this.parent && this.parent.getOrphanAndChildCount() <= this.maxChildren) {
-
-      this.parent.collapse();
-      
-    } else {
-
-      allOrphansAndChildren = this.getOrphansAndChildren();
-      
-      this.orphans  = [];
-      this.children = [];
-      this.isLeaf   = true;
-      
-      for (var i = 0; i < allOrphansAndChildren.length; i++) {
-        this.insert(allOrphansAndChildren[i]);
-      }
-    
+  if (this.parent) {
+    if (this !== this.parent.children[0] && this !== this.parent.children[1] && this !== this.parent.children[2] && this !== this.parent.children[3]) {
+      debugger;
     }
+  }
+  
+  if (this.parent && this.parent.canCollapse()) {
+    this.parent.collapse();
+    return; 
+  }
+
+  if (this.canCollapse() && !this.isLeaf) {
+
+    var allChildrenAndOrphans = this.getOrphansAndChildren();
+
+    this.children = [];
+    this.orphans  = [];
+    this.isLeaf   = true;
+
+    for (var i = 0; i < allChildrenAndOrphans.length; i++) {
+      this.insert(allChildrenAndOrphans[i]);
+    }  
+
   }
 
 };
+
+Quadtree.prototype.canCollapse = function () {
+  return this.getOrphanAndChildCount() <= this.maxChildren;
+}
 
 /**
  * [getOrphanCount returns the number of orphans in the quadTree]
@@ -357,6 +378,18 @@ Quadtree.prototype.getQuadtreeCount = function () {
   return count;
 
 };
+
+Quadtree.prototype.getEntireQuadtreesOrphansAndChildren = function () {
+  
+  var originalParent = this;
+
+  while (originalParent.parent) {
+    originalParent = originalParent.parent;
+  }
+
+  return originalParent.getOrphansAndChildren();
+
+}
 
 Quadtree.prototype.getParentOrphanComparisons = function () {
   

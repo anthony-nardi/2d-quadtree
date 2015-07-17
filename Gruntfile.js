@@ -23,7 +23,7 @@ module.exports = function(grunt) {
 		  	tasks: ['browserify']
 		  },
 		  space_game: {
-		  	files: ['demos/space_game/js/main.js'],
+		  	files: ['demos/space_game/js/main.js', 'demos/space_game/js/core/*.js', 'demos/space_game/js/models/*.js'],
 		  	tasks: ['browserify']
 		  }
 		},

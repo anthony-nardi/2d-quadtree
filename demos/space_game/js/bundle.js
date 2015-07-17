@@ -468,7 +468,7 @@ module.exports = [,,,
 'use strict';
 
 module.exports = require('../../../../js/quadtree.js');
-},{"../../../../js/quadtree.js":15}],7:[function(require,module,exports){
+},{"../../../../js/quadtree.js":16}],7:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -792,15 +792,19 @@ module.exports = (function () {
   };
 
 }());
-},{"../util/math/bounds":13,"../util/math/vector":14,"./clock":1,"./fullScreenDisplay":3,"./quadTree":6,"underscore":16}],8:[function(require,module,exports){
+},{"../util/math/bounds":14,"../util/math/vector":15,"./clock":1,"./fullScreenDisplay":3,"./quadTree":6,"underscore":17}],8:[function(require,module,exports){
 'use strict';
 
 
 var QuadTree = window.QuadTree = require('./core/quadTree.js'),
     clock                      = require('./core/clock'),
     boxFactory                 = require('./models/boxFactory'),
+    bouncyBoxFactory           = require('./models/bouncyBoxFactory'),
     shipFactory                = require('./models/shipFactory'),
-    map                        = new QuadTree();
+    map                        = new QuadTree({
+      'width': 10000,
+      'height': 10000
+    });
 
 
 function init () {
@@ -811,16 +815,45 @@ function init () {
     'quadTree': map
   });
 
-  var box1 = boxFactory();
 
-  myViewport.zoomBy(100);
 
-  map.insert(box1);
+  myViewport.zoomBy(1000);
+
 
   if (!Math.getRandomInt) {
     Math.getRandomInt = function (min, max) {
       return Math.floor(Math.random() * (max - min + 1)) + min;
     };
+  }
+  
+  for (var i = 0; i < 100; i += 1) {
+
+    var negX   = Math.random() < 0.5,
+        negY   = Math.random() < 0.5,
+        angleX = Math.random(),
+        angleY = Math.random(),
+        width  = Math.getRandomInt(25,100);
+
+    map.insert(bouncyBoxFactory({
+
+    'width' : width,
+    'height': width,
+
+    'quadTree' : map,
+
+    'speed': Math.getRandomInt(1, 10),
+
+    'x': Math.getRandomInt(map.x - map.halfWidth,  map.x  + map.halfWidth),
+    'y': Math.getRandomInt(map.y - map.halfHeight, map.y + map.halfHeight),
+
+    'angle': {
+      'x': negX ? - angleX : angleX,
+      'y': negY ? - angleY : angleY
+    },
+
+    'color': '#'+Math.floor(Math.random()*16777215).toString(16)
+    
+    }));
   }
 
   myViewport.addObjectToAlwaysRender(boxFactory({
@@ -830,24 +863,146 @@ function init () {
     'height': map.height
   }));
 
-  var myShip = map.insert(shipFactory({
+  var myShip = shipFactory({
     'angle':{
       'x':0.5,
       'y':0
     },
     'quadTree': map,
     'viewport': myViewport
-  }));
+  });
+
+  map.insert(myShip);
+
+  myViewport.follow(myShip);
 
   clock.start();
 
   window.map = map;
+  window.clock = clock;
   window.myViewport = myViewport;
 
 }
 
 window.addEventListener('DOMContentLoaded', init);
-},{"./core/clock":1,"./core/quadTree.js":6,"./core/viewport":7,"./models/boxFactory":9,"./models/shipFactory":12}],9:[function(require,module,exports){
+},{"./core/clock":1,"./core/quadTree.js":6,"./core/viewport":7,"./models/bouncyBoxFactory":9,"./models/boxFactory":10,"./models/shipFactory":13}],9:[function(require,module,exports){
+'use strict';
+
+var _ = require('underscore');
+
+module.exports = (function () {
+
+  var createVector = require('../util/math/vector'),
+      clock        = require('../core/clock');
+
+  var boxPrototype = {
+
+    'x': 0,
+    'y': 0,
+
+    'width': 50,
+    'height': 50,
+
+    'color': 'green',
+
+    'border': 'blue',
+
+    'lineWidth': 2,
+
+    'angle': {},
+
+    'speed': 1,
+
+    'breaks': 2,
+
+    'isAsteroid': true,
+
+    'removeNextUpdate': false,
+    'isRemoved' : false,
+
+    'sim'  : clock.UPDATE_BUFFER,
+
+    'impact': function () {
+      var quadTree = this.quadTree;
+
+        this.removeNextUpdate = true;
+      if (this.breaks === 0) {
+      } else {
+
+        quadTree.insert(create({
+          'x': this.x,
+          'y': this.y,
+          'width': this.width * 0.6,
+          'height': this.height * 0.6,
+          'speed': this.speed * 0.9,
+          'angle': {
+            'x': Math.getRandomInt(-180, 180),
+            'y': Math.getRandomInt(-180, 180)
+          },
+          'breaks': this.breaks - 1,
+          'quadTree': quadTree
+        }));
+        quadTree.insert(create({
+          'x': this.x,
+          'y': this.y,
+          'width': this.width * 0.6,
+          'angle': {
+            'x': Math.getRandomInt(-180, 180),
+            'y': Math.getRandomInt(-180, 180)
+          },
+          'height': this.height * 0.6,
+          'speed': this.speed * 0.9,
+          'breaks': this.breaks - 1,
+          'quadTree': quadTree
+        }));
+
+      }
+
+    },
+
+    'update': function () {
+
+      if (this.removeNextUpdate && !this.isRemoved) {
+        this.isRemoved = true;
+ 
+        this.off('update');
+       this.remove();
+       this.removed = true;
+       return;
+      }
+
+      this.add(this.angle.normalize().mult(this.speed / this.sim));
+
+      this.move(this.x, this.y);
+
+    },
+
+    'render': function (ctx, viewport) {
+      ctx.fillStyle = this.color;
+      ctx.lineWidth = this.lineWidth * viewport.scale;
+      ctx.fillRect(-this.width * viewport.scale / 2, -this.height* viewport.scale / 2, this.width * viewport.scale, this.height * viewport.scale);
+    }
+
+  };
+
+  function init(newBox) {
+
+    _.extend(newBox, createVector(newBox.x, newBox.y));
+    _.extend(newBox.angle, createVector(newBox.angle.x, newBox.angle.y));
+    newBox.on('update', newBox.update);
+
+    return newBox;
+
+  }
+
+  function create (config) {
+    return init(_.extend(Object.create(boxPrototype), config));
+  }
+
+  return create;
+
+}());
+},{"../core/clock":1,"../util/math/vector":15,"underscore":17}],10:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -878,9 +1033,9 @@ module.exports = (function () {
   };
 
 }());
-},{"underscore":16}],10:[function(require,module,exports){
+},{"underscore":17}],11:[function(require,module,exports){
 'use strict';
-
+var _ = require('underscore');
 module.exports = (function () {
 
   var createVector  = require('../util/math/vector'),
@@ -899,14 +1054,22 @@ module.exports = (function () {
       'range'       : 400,
       'isBullet'    : true,
       'traveled'    : 0,
+      'isRemoved'   : false,
       'sim'         : clock.UPDATE_BUFFER,
+      'removeNextUpdate': false,
       'render' : function (ctx, viewport) {
         ctx.fillStyle = this.color;
         ctx.fillRect(-this.width * viewport.scale / 2, -this.height* viewport.scale / 2, this.width * viewport.scale, this.height * viewport.scale);
       },
       'update':function () {
-
-        var collidesList = this.collidesList();
+        if (this.removeNextUpdate && !this.isRemoved) {
+          this.isRemoved = true;
+          this.off('update');
+         this.remove();
+         console.log('remove bullet')
+         return;
+        }
+        var collidesList = this.getCollisions();
 
         for (var i = 0; i < collidesList.length; i += 1) {
           if (collidesList[i].isAsteroid) {
@@ -925,20 +1088,20 @@ module.exports = (function () {
 
   function init(newBullet) {
 
-    newBullet.extend(createVector(newBullet.x, newBullet.y));
-    newBullet.angle.extend(createVector(newBullet.angle.x, newBullet.angle.y));
-    newBullet.velocity.extend(createVector());
+    _.extend(newBullet, createVector(newBullet.x, newBullet.y));
+    _.extend(newBullet.angle, createVector(newBullet.angle.x, newBullet.angle.y));
+    _.extend(newBullet.velocity, createVector());
     newBullet.on('update', newBullet.update);
 
     return newBullet;
   }
 
   return function (config) {
-    return init(Object.create(bulletPrototype).extend(config));
+    return init(_.extend(Object.create(bulletPrototype), config));
   };
 
 }());
-},{"../core/clock":1,"../util/math/vector":14}],11:[function(require,module,exports){
+},{"../core/clock":1,"../util/math/vector":15,"underscore":17}],12:[function(require,module,exports){
 'use strict';
 
 module.exports = (function () {
@@ -996,7 +1159,7 @@ module.exports = (function () {
 	};
 
 }());
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -1073,8 +1236,7 @@ module.exports = (function () {
 
           newBullet.onCollision = function () {
             that.bullets.splice(that.bullets.indexOf(newBullet, 1));
-            this.off('update');
-            newBullet.remove();
+            this.removeNextUpdate = true;
           };
 
           this.bullets.push(this.quadTree.insert(newBullet));
@@ -1236,7 +1398,7 @@ module.exports = (function () {
   };
 
 }());
-},{"../core/clock":1,"../util/math/vector":14,"./bulletFactory":10,"./logFactory":11,"underscore":16}],13:[function(require,module,exports){
+},{"../core/clock":1,"../util/math/vector":15,"./bulletFactory":11,"./logFactory":12,"underscore":17}],14:[function(require,module,exports){
 'use strict';
 
 module.exports = function (obj) {
@@ -1252,7 +1414,7 @@ module.exports = function (obj) {
   };
 };
 
-},{}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -1337,7 +1499,7 @@ module.exports = (function () {
 
 }());
 
-},{"underscore":16}],15:[function(require,module,exports){
+},{"underscore":17}],16:[function(require,module,exports){
 'use strict';
 
 var _ = window._ = require('underscore');
@@ -1363,6 +1525,14 @@ var rectPrototype = {
       this.parent.insert(this);
     }
 
+  },
+
+  'getCollisions': function () {
+    return this.parent.getCollisions(this);
+  },
+
+  'remove': function () {
+    this.parent.remove(this);
   }
 
 };
@@ -1410,7 +1580,7 @@ Quadtree.prototype.insert = function (object) {
       return;
     } else {
       forceObjectWithinBounds(object, this);
-      console.log('Object is outside the bounds this Quadtree');      
+      // console.log('Object is outside the bounds this Quadtree');      
     }
   }
 
@@ -1421,14 +1591,14 @@ Quadtree.prototype.insert = function (object) {
   if (this.isLeaf) {
     
     this.children.push(object);
+    setQuadrant(object, this);
 
     if (this.children.length > this.maxChildren && this.depth) {
-      console.log('Quadtree must divide because the number of children exceeds ' + this.maxChildren);
+      // console.log('Quadtree must divide because the number of children exceeds ' + this.maxChildren);
       this.divide();
       return;
     }
 
-    setQuadrant(object, this);
   
   // This quadTree contains quadTrees
   // We should check if the object we are inserting can be completely contained within
@@ -1438,19 +1608,19 @@ Quadtree.prototype.insert = function (object) {
     for (var i = 0; i < numberOfChildren; i++) {
       if (isWithinBounds(this.children[i], object)) {
         this.children[i].insert(object);
-        console.log('Object fits completely within a child Quadtree.');
+        // console.log('Object fits completely within a child Quadtree.');
         return;
       }
     }
 
     // Object does not fit within any of the sub-quadTrees.  It's an orphan.
 
-    console.log('Object is an orphan of %o', this);
+    // console.log('Object is an orphan of %o', this);
 
     setQuadrant(object, this);
     this.orphans.push(object);
 
-  }
+  }    
 
 };
 
@@ -1461,17 +1631,23 @@ Quadtree.prototype.insert = function (object) {
  */
 Quadtree.prototype.remove = function (object) {
 
-  var parent   = object.parent,
-      children = parent.children,
-      orphans  = parent.orphans;
+  var parent    = object.parent,
+      children  = parent.children,
+      orphans   = parent.orphans,
+      newParent = parent;
 
   if (_.contains(children, object)) {
     children.splice(children.indexOf(object), 1);
   } else if (_.contains(orphans, object)) {
     orphans.splice(orphans.indexOf(object), 1);
   } else {
+    debugger;
     throw 'Object not found in quadTree when attempting to remove';
   }
+  while (newParent.parent) {
+    newParent = newParent.parent;
+  }
+  object.parent = newParent;
   parent.collapse();
 };
 
@@ -1522,6 +1698,7 @@ Quadtree.prototype.divide = function () {
     this.insert(children[i]);
   }
 
+    
 };
 
 /**
@@ -1530,30 +1707,36 @@ Quadtree.prototype.divide = function () {
  */
 Quadtree.prototype.collapse = function () {
 
-  var allOrphansAndChildren;
-
-  if (this.getOrphanAndChildCount() <= this.maxChildren) {
-
-    if (this.parent && this.parent.getOrphanAndChildCount() <= this.maxChildren) {
-
-      this.parent.collapse();
-      
-    } else {
-
-      allOrphansAndChildren = this.getOrphansAndChildren();
-      
-      this.orphans  = [];
-      this.children = [];
-      this.isLeaf   = true;
-      
-      for (var i = 0; i < allOrphansAndChildren.length; i++) {
-        this.insert(allOrphansAndChildren[i]);
-      }
-    
+  if (this.parent) {
+    if (this !== this.parent.children[0] && this !== this.parent.children[1] && this !== this.parent.children[2] && this !== this.parent.children[3]) {
+      debugger;
     }
+  }
+  
+  if (this.parent && this.parent.canCollapse()) {
+    this.parent.collapse();
+    return; 
+  }
+
+  if (this.canCollapse() && !this.isLeaf) {
+
+    var allChildrenAndOrphans = this.getOrphansAndChildren();
+
+    this.children = [];
+    this.orphans  = [];
+    this.isLeaf   = true;
+
+    for (var i = 0; i < allChildrenAndOrphans.length; i++) {
+      this.insert(allChildrenAndOrphans[i]);
+    }  
+
   }
 
 };
+
+Quadtree.prototype.canCollapse = function () {
+  return this.getOrphanAndChildCount() <= this.maxChildren;
+}
 
 /**
  * [getOrphanCount returns the number of orphans in the quadTree]
@@ -1673,6 +1856,18 @@ Quadtree.prototype.getQuadtreeCount = function () {
   return count;
 
 };
+
+Quadtree.prototype.getEntireQuadtreesOrphansAndChildren = function () {
+  
+  var originalParent = this;
+
+  while (originalParent.parent) {
+    originalParent = originalParent.parent;
+  }
+
+  return originalParent.getOrphansAndChildren();
+
+}
 
 Quadtree.prototype.getParentOrphanComparisons = function () {
   
@@ -1935,7 +2130,7 @@ function forceObjectWithinBounds (object, rect) {
 }
 
 module.exports = Quadtree;
-},{"underscore":16}],16:[function(require,module,exports){
+},{"underscore":17}],17:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
