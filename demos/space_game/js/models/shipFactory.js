@@ -6,8 +6,8 @@ module.exports = (function () {
 
   var createVector  = require('../util/math/vector'),
       clock         = require('../core/clock'),
+      createExplosion = require('./explosionFactory'),
       createBullet  = require('./bulletFactory'),
-      createLog     = require('./logFactory'),
 
       shipPrototype = {
 
@@ -27,15 +27,15 @@ module.exports = (function () {
         'force': 1,
 
         'bullets': undefined,
-        'maxBullets': 7,
+        'maxBullets': 9,
 
-        'cooldown': 0,
-        'maxCooldown': 0.25,
+        'cooldown': 1,
+        'maxCooldown': 0.1,
 
         'thrustWidthPercentage': 0.8,
         'thrustHeightPercentage': 0.4,
 
-        'rotate': true ,
+        'rotate': true,
 
         'sim': clock.UPDATE_BUFFER / 1000,
 
@@ -102,6 +102,22 @@ module.exports = (function () {
         },
 
         'update': function () {
+
+          var collidesList = this.getCollisions();
+
+          for (var i = 0; i < collidesList.length; i++) {
+            if (collidesList[i].isAsteroid) {
+
+              var newExplosion = createExplosion({
+                'x': this.x,
+                'y': this.y
+              });
+
+              this.quadTree.insert(newExplosion);
+              this.off('update');
+              this.remove();
+            }
+          }
 
           this.updatePosition();
           this.updateVelocity();
@@ -211,21 +227,15 @@ module.exports = (function () {
 
     newShip.bullets = [];
 
-    _.extend(newShip, createVector(newShip.x, newShip.y));
-    _.extend(newShip.angle, createVector(newShip.angle.x, newShip.angle.y));
-    _.extend(newShip.velocity, createVector(0, 0));
+    _.extend(newShip,              createVector(newShip.x, newShip.y));
+    _.extend(newShip.angle,        createVector(newShip.angle.x, newShip.angle.y));
+    newShip.velocity = {};
+    _.extend(newShip.velocity,     createVector(0, 0));
     _.extend(newShip.acceleration, createVector(0, 0));
 
     newShip.on('update', newShip.update);
 
     newShip.on('input',  newShip.input);
-
-    // createLog({'viewport': newShip.viewport}).on('update', function () {
-    //   this.information.velocityX     = newShip.velocity.x;
-    //   this.information.velocityY     = newShip.velocity.y;
-    //   this.information.angle         = newShip.getRotation() * (180/Math.PI);
-    //   this.information.speed         = newShip.velocity.length();
-    // });
 
     return newShip;
 

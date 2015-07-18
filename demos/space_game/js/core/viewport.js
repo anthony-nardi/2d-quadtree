@@ -207,7 +207,7 @@ module.exports = (function () {
           return this;
         },
 
-        'render' : function () {
+        'render' : function (time) {
 
           var scale      = this.scale,
               ctx        = this.fullScreenDisplayCtx,
@@ -231,7 +231,7 @@ module.exports = (function () {
             if (renderList[i].getRotation) {
              ctx.rotate(renderList[i].getRotation());
             }
-            renderList[i].render(ctx, this);
+            renderList[i].render(ctx, this, time);
             ctx.restore();
           }
 
@@ -294,10 +294,10 @@ module.exports = (function () {
 
     });
 
-    that.on('render', function () {
+    that.on('render', function (time) {
       if (render) {
         //console.log('Updating viewport.');
-        that.render();
+        that.render(time);
 
       }
     });

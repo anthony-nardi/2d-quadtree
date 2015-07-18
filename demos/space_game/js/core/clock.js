@@ -30,8 +30,8 @@ module.exports = (function () {
       dtBuffer -= UPDATE_BUFFER;
     }
 
-
-    events.fire('render');
+    
+    events.fire('render', now);
 
     last = now;
 

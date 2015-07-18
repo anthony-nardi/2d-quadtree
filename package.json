@@ -4,7 +4,9 @@
   "description": "Quadtree for games and simulations.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "parallelshell \"npm run watch\" \"npm run start-server\"",
+    "start-server": "node node_modules/http-server/bin/http-server . -a localhost -p 8000",
+    "watch": "grunt"
   },
   "author": "Anthony Nardi",
   "license": "ISC",
@@ -13,7 +15,9 @@
     "grunt": "^0.4.5",
     "grunt-browserify": "^3.8.0",
     "grunt-contrib-less": "^1.0.1",
-    "grunt-contrib-watch": "^0.6.1"
+    "grunt-contrib-watch": "^0.6.1",
+    "parallelshell": "^1.2.0",
+    "http-server": "^0.8.0"
   },
   "dependencies": {
     "underscore": "^1.8.3"

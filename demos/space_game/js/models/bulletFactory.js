@@ -15,10 +15,9 @@ module.exports = (function () {
       'acceleration': {},
       'mass'        : 3,
       'force'       : 20,
-      'range'       : 400,
+      'range'       : 900,
       'isBullet'    : true,
       'traveled'    : 0,
-      'isRemoved'   : false,
       'sim'         : clock.UPDATE_BUFFER,
       'removeNextUpdate': false,
       'render' : function (ctx, viewport) {
@@ -26,12 +25,10 @@ module.exports = (function () {
         ctx.fillRect(-this.width * viewport.scale / 2, -this.height* viewport.scale / 2, this.width * viewport.scale, this.height * viewport.scale);
       },
       'update':function () {
-        if (this.removeNextUpdate && !this.isRemoved) {
-          this.isRemoved = true;
+        if (this.removeNextUpdate) {
           this.off('update');
-         this.remove();
-         console.log('remove bullet')
-         return;
+          this.remove();
+          return;
         }
         var collidesList = this.getCollisions();
 

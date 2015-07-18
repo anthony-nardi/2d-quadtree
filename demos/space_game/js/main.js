@@ -5,6 +5,7 @@ var QuadTree = window.QuadTree = require('./core/quadTree.js'),
     clock                      = require('./core/clock'),
     boxFactory                 = require('./models/boxFactory'),
     bouncyBoxFactory           = require('./models/bouncyBoxFactory'),
+    explosionFactory           = require('./models/explosionFactory'),
     shipFactory                = require('./models/shipFactory'),
     map                        = new QuadTree({
       'width': 10000,
@@ -31,10 +32,12 @@ function init () {
     };
   }
   
-  for (var i = 0; i < 100; i += 1) {
+  for (var i = 0; i < 200; i += 1) {
 
     var negX   = Math.random() < 0.5,
         negY   = Math.random() < 0.5,
+        negSpin = Math.random() < 0.5,
+        spin    = (negSpin ? -1 : 1) * Math.getRandomInt(0, 25) / 1000,
         angleX = Math.random(),
         angleY = Math.random(),
         width  = Math.getRandomInt(25,100);
@@ -56,16 +59,19 @@ function init () {
       'y': negY ? - angleY : angleY
     },
 
+    'spin': spin,
+
     'color': '#'+Math.floor(Math.random()*16777215).toString(16)
     
     }));
+
   }
 
   myViewport.addObjectToAlwaysRender(boxFactory({
     'x': map.x,
     'y': map.y,
     'width': map.width,
-    'height': map.height
+    'height': map.heightwxc
   }));
 
   var myShip = shipFactory({
@@ -86,6 +92,7 @@ function init () {
   window.map = map;
   window.clock = clock;
   window.myViewport = myViewport;
+  window.explosionFactory = explosionFactory;
 
 }
 

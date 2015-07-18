@@ -31,8 +31,8 @@ module.exports = (function () {
       dtBuffer -= UPDATE_BUFFER;
     }
 
-
-    events.fire('render');
+    
+    events.fire('render', now);
 
     last = now;
 
@@ -678,7 +678,7 @@ module.exports = (function () {
           return this;
         },
 
-        'render' : function () {
+        'render' : function (time) {
 
           var scale      = this.scale,
               ctx        = this.fullScreenDisplayCtx,
@@ -702,7 +702,7 @@ module.exports = (function () {
             if (renderList[i].getRotation) {
              ctx.rotate(renderList[i].getRotation());
             }
-            renderList[i].render(ctx, this);
+            renderList[i].render(ctx, this, time);
             ctx.restore();
           }
 
@@ -765,10 +765,10 @@ module.exports = (function () {
 
     });
 
-    that.on('render', function () {
+    that.on('render', function (time) {
       if (render) {
         //console.log('Updating viewport.');
-        that.render();
+        that.render(time);
 
       }
     });
@@ -800,6 +800,7 @@ var QuadTree = window.QuadTree = require('./core/quadTree.js'),
     clock                      = require('./core/clock'),
     boxFactory                 = require('./models/boxFactory'),
     bouncyBoxFactory           = require('./models/bouncyBoxFactory'),
+    explosionFactory           = require('./models/explosionFactory'),
     shipFactory                = require('./models/shipFactory'),
     map                        = new QuadTree({
       'width': 10000,
@@ -826,10 +827,12 @@ function init () {
     };
   }
   
-  for (var i = 0; i < 100; i += 1) {
+  for (var i = 0; i < 200; i += 1) {
 
     var negX   = Math.random() < 0.5,
         negY   = Math.random() < 0.5,
+        negSpin = Math.random() < 0.5,
+        spin    = (negSpin ? -1 : 1) * Math.getRandomInt(0, 25) / 1000,
         angleX = Math.random(),
         angleY = Math.random(),
         width  = Math.getRandomInt(25,100);
@@ -851,16 +854,19 @@ function init () {
       'y': negY ? - angleY : angleY
     },
 
+    'spin': spin,
+
     'color': '#'+Math.floor(Math.random()*16777215).toString(16)
     
     }));
+
   }
 
   myViewport.addObjectToAlwaysRender(boxFactory({
     'x': map.x,
     'y': map.y,
     'width': map.width,
-    'height': map.height
+    'height': map.heightwxc
   }));
 
   var myShip = shipFactory({
@@ -881,11 +887,12 @@ function init () {
   window.map = map;
   window.clock = clock;
   window.myViewport = myViewport;
+  window.explosionFactory = explosionFactory;
 
 }
 
 window.addEventListener('DOMContentLoaded', init);
-},{"./core/clock":1,"./core/quadTree.js":6,"./core/viewport":7,"./models/bouncyBoxFactory":9,"./models/boxFactory":10,"./models/shipFactory":13}],9:[function(require,module,exports){
+},{"./core/clock":1,"./core/quadTree.js":6,"./core/viewport":7,"./models/bouncyBoxFactory":9,"./models/boxFactory":10,"./models/explosionFactory":12,"./models/shipFactory":13}],9:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -909,36 +916,47 @@ module.exports = (function () {
 
     'lineWidth': 2,
 
-    'angle': {},
+    'angle'   : {},
+    
+    'rotation': {},
+    'spin': 0,
+    
+    'mass': 30,
+    'force': 1,
 
-    'speed': 1,
+    'maxSpeed': 3,
 
     'breaks': 2,
 
     'isAsteroid': true,
 
     'removeNextUpdate': false,
-    'isRemoved' : false,
+    
 
     'sim'  : clock.UPDATE_BUFFER,
 
+    'getRotation': function () {
+        return this.rotation.toRadians();
+    },
+
     'impact': function () {
       var quadTree = this.quadTree;
-
         this.removeNextUpdate = true;
       if (this.breaks === 0) {
       } else {
-
+        var color = this.color;
         quadTree.insert(create({
           'x': this.x,
           'y': this.y,
           'width': this.width * 0.6,
           'height': this.height * 0.6,
-          'speed': this.speed * 0.9,
+          'speed': this.speed * 1.1,
           'angle': {
             'x': Math.getRandomInt(-180, 180),
             'y': Math.getRandomInt(-180, 180)
           },
+          'spin': (Math.random() < 0.5 ? -1 : 1) * Math.getRandomInt(0, 25) / 1000,
+          'color': color,
           'breaks': this.breaks - 1,
           'quadTree': quadTree
         }));
@@ -951,8 +969,9 @@ module.exports = (function () {
             'y': Math.getRandomInt(-180, 180)
           },
           'height': this.height * 0.6,
-          'speed': this.speed * 0.9,
+          'speed': this.speed * 1.1,
           'breaks': this.breaks - 1,
+          'color': color,
           'quadTree': quadTree
         }));
 
@@ -960,21 +979,41 @@ module.exports = (function () {
 
     },
 
+    'updatePosition': function () {
+
+      this.add(this.velocity);
+      this.move(this.x, this.y);
+    },
+
+    'updateRotation': function () {
+
+      this.rotation.rotate(this.spin);
+        
+ 
+    },
+
+    'updateVelocity': function () {
+      this.velocity.add(this.angle.normalize().mult(this.force / this.mass));
+
+      this.velocity.mult(this.maxSpeed / this.velocity.length());
+    },
+
+    'limitVelocity': function () {
+      if (this.velocity.length() > this.maxSpeed) {
+      }
+    },
     'update': function () {
 
-      if (this.removeNextUpdate && !this.isRemoved) {
-        this.isRemoved = true;
- 
+      if (this.removeNextUpdate) {
         this.off('update');
-       this.remove();
-       this.removed = true;
-       return;
+        this.remove();
+        this.removed = true;
+        return;
       }
-
-      this.add(this.angle.normalize().mult(this.speed / this.sim));
-
-      this.move(this.x, this.y);
-
+      
+      this.updateRotation();
+      this.updatePosition();
+    
     },
 
     'render': function (ctx, viewport) {
@@ -988,7 +1027,12 @@ module.exports = (function () {
   function init(newBox) {
 
     _.extend(newBox, createVector(newBox.x, newBox.y));
-    _.extend(newBox.angle, createVector(newBox.angle.x, newBox.angle.y));
+
+    newBox.angle = createVector(newBox.angle.x, newBox.angle.y);
+    
+    newBox.velocity = createVector(Math.getRandomInt(0, 100) / 100, Math.getRandomInt(0, 100) / 100);
+    newBox.rotation = createVector(Math.getRandomInt(0, 100) / 100, Math.getRandomInt(0, 100) / 100);
+
     newBox.on('update', newBox.update);
 
     return newBox;
@@ -1015,7 +1059,7 @@ module.exports = (function () {
     'width': 10,
     'height': 10,
     'color': 'yellow',
-    'border': 'blue',
+    'border': 'blue',                           
     'render': function (ctx, viewport) {
       ctx.strokeStyle = this.color;
       ctx.strokeRect(-this.width * viewport.scale / 2, -this.height* viewport.scale / 2, this.width * viewport.scale, this.height * viewport.scale);
@@ -1024,15 +1068,15 @@ module.exports = (function () {
 
   function init(newBox) {
 
-    return newBox;
+    return newBox;    
 
-  }
+  } 
 
-  return function (config) {
+  return function (config) {                        
     return init(_.extend(Object.create(boxPrototype), config));
   };
 
-}());
+}());                   
 },{"underscore":17}],11:[function(require,module,exports){
 'use strict';
 var _ = require('underscore');
@@ -1051,10 +1095,9 @@ module.exports = (function () {
       'acceleration': {},
       'mass'        : 3,
       'force'       : 20,
-      'range'       : 400,
+      'range'       : 900,
       'isBullet'    : true,
       'traveled'    : 0,
-      'isRemoved'   : false,
       'sim'         : clock.UPDATE_BUFFER,
       'removeNextUpdate': false,
       'render' : function (ctx, viewport) {
@@ -1062,12 +1105,10 @@ module.exports = (function () {
         ctx.fillRect(-this.width * viewport.scale / 2, -this.height* viewport.scale / 2, this.width * viewport.scale, this.height * viewport.scale);
       },
       'update':function () {
-        if (this.removeNextUpdate && !this.isRemoved) {
-          this.isRemoved = true;
+        if (this.removeNextUpdate) {
           this.off('update');
-         this.remove();
-         console.log('remove bullet')
-         return;
+          this.remove();
+          return;
         }
         var collidesList = this.getCollisions();
 
@@ -1103,63 +1144,48 @@ module.exports = (function () {
 }());
 },{"../core/clock":1,"../util/math/vector":15,"underscore":17}],12:[function(require,module,exports){
 'use strict';
+// https://gist.github.com/gre/1650294
+var _ = require('underscore');
 
 module.exports = (function () {
 
-	var logProto = {
-
-    'information': {},
-
+  var explosionPrototype = {
     'x': 0,
     'y': 0,
-
-    'width': undefined,
-    'height': undefined,
-
-    'font': '20px Georgia',
-
-    'color': '#ffffff',
-
-    'getText': function () {
-
-      var text = '';
-
-      for (var key in this.information) {
-        if (this.information.hasOwnProperty(key)) {
-          text += key + ': ' + this.information[key] + '\n';
-        }
-      }
-
-      return text.split('\n');
-
-    },
-
-    'render': function (ctx, viewport) {
-
-      var text = this.getText();
-
-      ctx.font = this.font;
-      ctx.fillStyle = this.color;
-
-      for (var i = 0; i < text.length; i += 1) {
-        ctx.fillText(text[i], 0, i * 20);
-      }
-
-  	}
-
+    'width': 600,
+    'height': 600,
+    'radius': 300,
+    'color': 'red',
+    'totalDuration': 7000,
+    'border': 'blue',
+    'render': function (ctx, viewport, time) {
+      var duration = Math.min(Math.max((time - this.startTime) / this.totalDuration, 0), 1); 
+      var gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.radius * timeFunction(duration) / 2);
+      gradient.addColorStop(1, '#000');
+      gradient.addColorStop(0, this.color);
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius * timeFunction(duration) * viewport.scale, 0, 2 * Math.PI, false);
+      ctx.fill();
+      ctx.closePath();
+    }
   };
 
-	function init (newLog) {
-		newLog.viewport.addObjectToAlwaysRender(newLog);
-    return newLog;
-	}
+  function init(newExplosion) {
 
-	return function (config) {
-    return init(Object.create(logProto).extend(config));
-	};
+    newExplosion.startTime = Date.now();
+    return newExplosion;
+
+  }
+  
+  function timeFunction (t) { return (--t)*t*t+1; }
+
+  return function (config) {
+    return init(_.extend(Object.create(explosionPrototype), config));
+  };
 
 }());
-},{}],13:[function(require,module,exports){
+},{"underscore":17}],13:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -1168,8 +1194,8 @@ module.exports = (function () {
 
   var createVector  = require('../util/math/vector'),
       clock         = require('../core/clock'),
+      createExplosion = require('./explosionFactory'),
       createBullet  = require('./bulletFactory'),
-      createLog     = require('./logFactory'),
 
       shipPrototype = {
 
@@ -1189,15 +1215,15 @@ module.exports = (function () {
         'force': 1,
 
         'bullets': undefined,
-        'maxBullets': 7,
+        'maxBullets': 9,
 
-        'cooldown': 0,
-        'maxCooldown': 0.25,
+        'cooldown': 1,
+        'maxCooldown': 0.1,
 
         'thrustWidthPercentage': 0.8,
         'thrustHeightPercentage': 0.4,
 
-        'rotate': true ,
+        'rotate': true,
 
         'sim': clock.UPDATE_BUFFER / 1000,
 
@@ -1264,6 +1290,22 @@ module.exports = (function () {
         },
 
         'update': function () {
+
+          var collidesList = this.getCollisions();
+
+          for (var i = 0; i < collidesList.length; i++) {
+            if (collidesList[i].isAsteroid) {
+
+              var newExplosion = createExplosion({
+                'x': this.x,
+                'y': this.y
+              });
+
+              this.quadTree.insert(newExplosion);
+              this.off('update');
+              this.remove();
+            }
+          }
 
           this.updatePosition();
           this.updateVelocity();
@@ -1373,21 +1415,15 @@ module.exports = (function () {
 
     newShip.bullets = [];
 
-    _.extend(newShip, createVector(newShip.x, newShip.y));
-    _.extend(newShip.angle, createVector(newShip.angle.x, newShip.angle.y));
-    _.extend(newShip.velocity, createVector(0, 0));
+    _.extend(newShip,              createVector(newShip.x, newShip.y));
+    _.extend(newShip.angle,        createVector(newShip.angle.x, newShip.angle.y));
+    newShip.velocity = {};
+    _.extend(newShip.velocity,     createVector(0, 0));
     _.extend(newShip.acceleration, createVector(0, 0));
 
     newShip.on('update', newShip.update);
 
     newShip.on('input',  newShip.input);
-
-    // createLog({'viewport': newShip.viewport}).on('update', function () {
-    //   this.information.velocityX     = newShip.velocity.x;
-    //   this.information.velocityY     = newShip.velocity.y;
-    //   this.information.angle         = newShip.getRotation() * (180/Math.PI);
-    //   this.information.speed         = newShip.velocity.length();
-    // });
 
     return newShip;
 
@@ -1398,7 +1434,7 @@ module.exports = (function () {
   };
 
 }());
-},{"../core/clock":1,"../util/math/vector":15,"./bulletFactory":11,"./logFactory":12,"underscore":17}],14:[function(require,module,exports){
+},{"../core/clock":1,"../util/math/vector":15,"./bulletFactory":11,"./explosionFactory":12,"underscore":17}],14:[function(require,module,exports){
 'use strict';
 
 module.exports = function (obj) {
