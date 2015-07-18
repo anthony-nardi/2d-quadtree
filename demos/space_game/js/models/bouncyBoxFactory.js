@@ -135,7 +135,7 @@ module.exports = (function () {
 
     newBox.angle = createVector(newBox.angle.x, newBox.angle.y);
     
-    newBox.velocity = createVector(Math.getRandomInt(0, 100) / 100, Math.getRandomInt(0, 100) / 100);
+    newBox.velocity = createVector(Math.random() * (Math.random() < 0.5 ? 1 : -1), Math.random() * (Math.random() < 0.5 ? 1 : -1));
     newBox.rotation = createVector(Math.getRandomInt(0, 100) / 100, Math.getRandomInt(0, 100) / 100);
 
     newBox.on('update', newBox.update);

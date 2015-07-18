@@ -19,9 +19,20 @@ module.exports = (function () {
     'radius': 835,
     'color': 'green',
     'z-index': 10,
-    'border': 'blue',                           
+    'border': 'blue',
+    'update':function () {
+
+      var collidesList = this.getCollisions();
+
+      for (var i = 0; i < collidesList.length; i += 1) {
+        if (collidesList[i].isAsteroid) {
+          collidesList[i].impact(this);
+        }
+      }
+
+    },                         
     'render': function (ctx, viewport) {
-      ctx.drawImage(img, 0, 0, viewport.scale * img.width, viewport.scale * img.height);
+      ctx.drawImage(img, -this.width / 2 * viewport.scale, -this.height / 2 * viewport.scale, viewport.scale * img.width, viewport.scale * img.height);
       // ctx.fillStyle = this.color;
       // ctx.beginPath();
       // ctx.arc(0, 0, this.radius * viewport.scale, 0, 2 * Math.PI, false);
@@ -31,7 +42,7 @@ module.exports = (function () {
   };
 
   function init(newPlanet) {
-
+    newPlanet.on('update', newPlanet.update);
     return newPlanet;    
 
   } 
