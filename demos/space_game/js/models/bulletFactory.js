@@ -15,6 +15,7 @@ module.exports = (function () {
       'acceleration': {},
       'mass'        : 3,
       'force'       : 20,
+      'z-index'     : 10000,
       'range'       : 900,
       'isBullet'    : true,
       'traveled'    : 0,

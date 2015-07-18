@@ -20,7 +20,7 @@ module.exports = (function () {
     'border': 'blue',
 
     'lineWidth': 2,
-
+    'z-index': 50,
     'angle'   : {},
     
     'rotation': {},

@@ -7,6 +7,7 @@ var QuadTree = window.QuadTree = require('./core/quadTree.js'),
     bouncyBoxFactory           = require('./models/bouncyBoxFactory'),
     explosionFactory           = require('./models/explosionFactory'),
     shipFactory                = require('./models/shipFactory'),
+    planetFactory              = require('./models/planetFactory'),
     map                        = new QuadTree({
       'width': 10000,
       'height': 10000
@@ -22,8 +23,22 @@ function init () {
   });
 
 
+  map.insert(planetFactory());
+  
+  var myShip = shipFactory({
+    'angle':{
+      'x':0.5,
+      'y':0
+    },
+    'quadTree': map,
+    'viewport': myViewport
+  });
 
-  myViewport.zoomBy(1000);
+  map.insert(myShip);
+
+  myViewport.zoomBy(2000);
+
+  myViewport.follow(myShip);
 
 
   if (!Math.getRandomInt) {
@@ -74,18 +89,6 @@ function init () {
     'height': map.heightwxc
   }));
 
-  var myShip = shipFactory({
-    'angle':{
-      'x':0.5,
-      'y':0
-    },
-    'quadTree': map,
-    'viewport': myViewport
-  });
-
-  map.insert(myShip);
-
-  myViewport.follow(myShip);
 
   clock.start();
 

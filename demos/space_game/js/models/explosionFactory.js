@@ -10,14 +10,15 @@ module.exports = (function () {
     'width': 600,
     'height': 600,
     'radius': 300,
-    'color': 'red',
+    'color': '233, 75, 2',
     'totalDuration': 7000,
     'border': 'blue',
+    'z-index': 9999,
     'render': function (ctx, viewport, time) {
       var duration = Math.min(Math.max((time - this.startTime) / this.totalDuration, 0), 1); 
-      var gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.radius * timeFunction(duration) / 2);
-      gradient.addColorStop(1, '#000');
-      gradient.addColorStop(0, this.color);
+      var gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.radius * timeFunction(duration) * viewport.scale);
+      gradient.addColorStop(1, 'rgba('+this.color+', 0)');
+      gradient.addColorStop(0, 'rgba('+this.color+', 1)');
       ctx.fillStyle = gradient;
       ctx.beginPath();
       ctx.arc(0, 0, this.radius * timeFunction(duration) * viewport.scale, 0, 2 * Math.PI, false);

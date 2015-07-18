@@ -211,9 +211,10 @@ module.exports = (function () {
 
           var scale      = this.scale,
               ctx        = this.fullScreenDisplayCtx,
-              renderList = this.quadTree.getOrphansAndChildren().concat(this.alwaysRender),//this.collidesList().concat(this.alwaysRender),
+              renderList = _.sortBy(this.quadTree.getOrphansAndChildren().concat(this.alwaysRender), 'z-index'),//this.collidesList().concat(this.alwaysRender),
               offsetX    = this.x - this.width / 2,
               offsetY    = this.y - this.height / 2;
+
           // console.log('~~~~~~~~~~~~~~RENDER LIST~~~~~~~~~~~~~~~~~~~~~');
           // console.log(renderList);
           //get bounds for render

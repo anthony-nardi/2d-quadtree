@@ -468,7 +468,7 @@ module.exports = [,,,
 'use strict';
 
 module.exports = require('../../../../js/quadtree.js');
-},{"../../../../js/quadtree.js":16}],7:[function(require,module,exports){
+},{"../../../../js/quadtree.js":17}],7:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -682,9 +682,10 @@ module.exports = (function () {
 
           var scale      = this.scale,
               ctx        = this.fullScreenDisplayCtx,
-              renderList = this.quadTree.getOrphansAndChildren().concat(this.alwaysRender),//this.collidesList().concat(this.alwaysRender),
+              renderList = _.sortBy(this.quadTree.getOrphansAndChildren().concat(this.alwaysRender), 'z-index'),//this.collidesList().concat(this.alwaysRender),
               offsetX    = this.x - this.width / 2,
               offsetY    = this.y - this.height / 2;
+
           // console.log('~~~~~~~~~~~~~~RENDER LIST~~~~~~~~~~~~~~~~~~~~~');
           // console.log(renderList);
           //get bounds for render
@@ -792,7 +793,7 @@ module.exports = (function () {
   };
 
 }());
-},{"../util/math/bounds":14,"../util/math/vector":15,"./clock":1,"./fullScreenDisplay":3,"./quadTree":6,"underscore":17}],8:[function(require,module,exports){
+},{"../util/math/bounds":15,"../util/math/vector":16,"./clock":1,"./fullScreenDisplay":3,"./quadTree":6,"underscore":18}],8:[function(require,module,exports){
 'use strict';
 
 
@@ -802,6 +803,7 @@ var QuadTree = window.QuadTree = require('./core/quadTree.js'),
     bouncyBoxFactory           = require('./models/bouncyBoxFactory'),
     explosionFactory           = require('./models/explosionFactory'),
     shipFactory                = require('./models/shipFactory'),
+    planetFactory              = require('./models/planetFactory'),
     map                        = new QuadTree({
       'width': 10000,
       'height': 10000
@@ -817,8 +819,22 @@ function init () {
   });
 
 
+  map.insert(planetFactory());
+  
+  var myShip = shipFactory({
+    'angle':{
+      'x':0.5,
+      'y':0
+    },
+    'quadTree': map,
+    'viewport': myViewport
+  });
 
-  myViewport.zoomBy(1000);
+  map.insert(myShip);
+
+  myViewport.zoomBy(2000);
+
+  myViewport.follow(myShip);
 
 
   if (!Math.getRandomInt) {
@@ -869,18 +885,6 @@ function init () {
     'height': map.heightwxc
   }));
 
-  var myShip = shipFactory({
-    'angle':{
-      'x':0.5,
-      'y':0
-    },
-    'quadTree': map,
-    'viewport': myViewport
-  });
-
-  map.insert(myShip);
-
-  myViewport.follow(myShip);
 
   clock.start();
 
@@ -892,7 +896,7 @@ function init () {
 }
 
 window.addEventListener('DOMContentLoaded', init);
-},{"./core/clock":1,"./core/quadTree.js":6,"./core/viewport":7,"./models/bouncyBoxFactory":9,"./models/boxFactory":10,"./models/explosionFactory":12,"./models/shipFactory":13}],9:[function(require,module,exports){
+},{"./core/clock":1,"./core/quadTree.js":6,"./core/viewport":7,"./models/bouncyBoxFactory":9,"./models/boxFactory":10,"./models/explosionFactory":12,"./models/planetFactory":13,"./models/shipFactory":14}],9:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -915,7 +919,7 @@ module.exports = (function () {
     'border': 'blue',
 
     'lineWidth': 2,
-
+    'z-index': 50,
     'angle'   : {},
     
     'rotation': {},
@@ -1046,7 +1050,7 @@ module.exports = (function () {
   return create;
 
 }());
-},{"../core/clock":1,"../util/math/vector":15,"underscore":17}],10:[function(require,module,exports){
+},{"../core/clock":1,"../util/math/vector":16,"underscore":18}],10:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -1077,7 +1081,7 @@ module.exports = (function () {
   };
 
 }());                   
-},{"underscore":17}],11:[function(require,module,exports){
+},{"underscore":18}],11:[function(require,module,exports){
 'use strict';
 var _ = require('underscore');
 module.exports = (function () {
@@ -1095,6 +1099,7 @@ module.exports = (function () {
       'acceleration': {},
       'mass'        : 3,
       'force'       : 20,
+      'z-index'     : 10000,
       'range'       : 900,
       'isBullet'    : true,
       'traveled'    : 0,
@@ -1142,7 +1147,7 @@ module.exports = (function () {
   };
 
 }());
-},{"../core/clock":1,"../util/math/vector":15,"underscore":17}],12:[function(require,module,exports){
+},{"../core/clock":1,"../util/math/vector":16,"underscore":18}],12:[function(require,module,exports){
 'use strict';
 // https://gist.github.com/gre/1650294
 var _ = require('underscore');
@@ -1155,14 +1160,15 @@ module.exports = (function () {
     'width': 600,
     'height': 600,
     'radius': 300,
-    'color': 'red',
+    'color': '233, 75, 2',
     'totalDuration': 7000,
     'border': 'blue',
+    'z-index': 9999,
     'render': function (ctx, viewport, time) {
       var duration = Math.min(Math.max((time - this.startTime) / this.totalDuration, 0), 1); 
-      var gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.radius * timeFunction(duration) / 2);
-      gradient.addColorStop(1, '#000');
-      gradient.addColorStop(0, this.color);
+      var gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.radius * timeFunction(duration) * viewport.scale);
+      gradient.addColorStop(1, 'rgba('+this.color+', 0)');
+      gradient.addColorStop(0, 'rgba('+this.color+', 1)');
       ctx.fillStyle = gradient;
       ctx.beginPath();
       ctx.arc(0, 0, this.radius * timeFunction(duration) * viewport.scale, 0, 2 * Math.PI, false);
@@ -1185,7 +1191,51 @@ module.exports = (function () {
   };
 
 }());
-},{"underscore":17}],13:[function(require,module,exports){
+},{"underscore":18}],13:[function(require,module,exports){
+'use strict';
+
+var _ = require('underscore');
+
+module.exports = (function () {
+  var img = new Image();
+  
+  img.src = './planet.png';
+  img.onload = function () {
+    console.log('img loaded');
+    img.width  *= 2;
+    img.height *= 2;
+  }
+  var planetPrototype = {
+    'x': 0,
+    'y': 0,
+    'width': 835 * 2,
+    'height': 835 * 2,
+    'radius': 835,
+    'color': 'green',
+    'z-index': 10,
+    'border': 'blue',                           
+    'render': function (ctx, viewport) {
+      ctx.drawImage(img, 0, 0, viewport.scale * img.width, viewport.scale * img.height);
+      // ctx.fillStyle = this.color;
+      // ctx.beginPath();
+      // ctx.arc(0, 0, this.radius * viewport.scale, 0, 2 * Math.PI, false);
+      // ctx.fill();
+      // ctx.closePath();
+    }
+  };
+
+  function init(newPlanet) {
+
+    return newPlanet;    
+
+  } 
+
+  return function (config) {                        
+    return init(_.extend(Object.create(planetPrototype), config));
+  };
+
+}());                   
+},{"underscore":18}],14:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -1434,7 +1484,7 @@ module.exports = (function () {
   };
 
 }());
-},{"../core/clock":1,"../util/math/vector":15,"./bulletFactory":11,"./explosionFactory":12,"underscore":17}],14:[function(require,module,exports){
+},{"../core/clock":1,"../util/math/vector":16,"./bulletFactory":11,"./explosionFactory":12,"underscore":18}],15:[function(require,module,exports){
 'use strict';
 
 module.exports = function (obj) {
@@ -1450,7 +1500,7 @@ module.exports = function (obj) {
   };
 };
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -1535,7 +1585,7 @@ module.exports = (function () {
 
 }());
 
-},{"underscore":17}],16:[function(require,module,exports){
+},{"underscore":18}],17:[function(require,module,exports){
 'use strict';
 
 var _ = window._ = require('underscore');
@@ -2166,7 +2216,7 @@ function forceObjectWithinBounds (object, rect) {
 }
 
 module.exports = Quadtree;
-},{"underscore":17}],17:[function(require,module,exports){
+},{"underscore":18}],18:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
