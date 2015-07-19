@@ -7,13 +7,12 @@ module.exports = (function () {
   var createVector = require('../util/math/vector'),
       clock        = require('../core/clock');
 
-  var boxPrototype = {
+  var asteroidPrototype = {
 
     'x': 0,
     'y': 0,
 
-    'width': 50,
-    'height': 50,
+    'radius': 25,
 
     'color': 'green',
 
@@ -21,10 +20,11 @@ module.exports = (function () {
 
     'lineWidth': 2,
     'z-index': 50,
+
     'angle'   : {},
     
-    'rotation': {},
-    'spin': 0,
+    // 'rotation': {},
+    // 'spin': 0,
     
     'mass': 30,
     'force': 1,
@@ -40,15 +40,19 @@ module.exports = (function () {
 
     'sim'  : clock.UPDATE_BUFFER,
 
-    'getRotation': function () {
-        return this.rotation.toRadians();
-    },
+    // 'getRotation': function () {
+    //     return this.rotation.toRadians();
+    // },
 
-    'impact': function (object) {
+    'impact': function () {
+      
       var quadTree = this.quadTree;
+      
       this.removeNextUpdate = true;
+      
       if (this.breaks === 0) {
       } else {
+      
         var color = this.color;
         quadTree.insert(create({
           'x': this.x,
@@ -90,12 +94,12 @@ module.exports = (function () {
       this.move(this.x, this.y);
     },
 
-    'updateRotation': function () {
+    // 'updateRotation': function () {
 
-      this.rotation.rotate(this.spin);
+    //   this.rotation.rotate(this.spin);
         
  
-    },
+    // },
 
     'updateVelocity': function () {
       this.velocity.add(this.angle.normalize().mult(this.force / this.mass));
@@ -116,36 +120,40 @@ module.exports = (function () {
         return;
       }
       
-      this.updateRotation();
+      // this.updateRotation();
       this.updatePosition();
     
     },
 
     'render': function (ctx, viewport) {
       ctx.fillStyle = this.color;
-      ctx.lineWidth = this.lineWidth * viewport.scale;
-      ctx.fillRect(-this.width * viewport.scale / 2, -this.height* viewport.scale / 2, this.width * viewport.scale, this.height * viewport.scale);
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius * viewport.scale, 0, 2 * Math.PI, false);
+      ctx.fill();
+      ctx.closePath();
     }
 
   };
 
-  function init(newBox) {
+  function init(newAsteroid) {
 
-    _.extend(newBox, createVector(newBox.x, newBox.y));
+    _.extend(newAsteroid, createVector(newAsteroid.x, newAsteroid.y));
 
-    newBox.angle = createVector(newBox.angle.x, newBox.angle.y);
+    newAsteroid.width = newAsteroid.radius * 2;
+    newAsteroid.height = newAsteroid.radius * 2;
+    newAsteroid.angle = createVector(newAsteroid.angle.x, newAsteroid.angle.y);
     
-    newBox.velocity = createVector(Math.random() * (Math.random() < 0.5 ? 1 : -1), Math.random() * (Math.random() < 0.5 ? 1 : -1));
-    newBox.rotation = createVector(Math.getRandomInt(0, 100) / 100, Math.getRandomInt(0, 100) / 100);
+    newAsteroid.velocity = createVector(Math.random() * (Math.random() < 0.5 ? 1 : -1), Math.random() * (Math.random() < 0.5 ? 1 : -1));
+    // newAsteroid.rotation = createVector(Math.getRandomInt(0, 100) / 100, Math.getRandomInt(0, 100) / 100);
 
-    newBox.on('update', newBox.update);
+    newAsteroid.on('update', newAsteroid.update);
 
-    return newBox;
+    return newAsteroid;
 
   }
 
   function create (config) {
-    return init(_.extend(Object.create(boxPrototype), config));
+    return init(_.extend(Object.create(asteroidPrototype), config));
   }
 
   return create;

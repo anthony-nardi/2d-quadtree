@@ -14,8 +14,6 @@ module.exports = (function () {
   var planetPrototype = {
     'x': 0,
     'y': 0,
-    'width': 835 * 2,
-    'height': 835 * 2,
     'radius': 835,
     'color': 'green',
     'z-index': 10,
@@ -42,6 +40,8 @@ module.exports = (function () {
   };
 
   function init(newPlanet) {
+    newPlanet.width = newPlanet.radius * 2;
+    newPlanet.height = newPlanet.radius * 2;
     newPlanet.on('update', newPlanet.update);
     return newPlanet;    
 

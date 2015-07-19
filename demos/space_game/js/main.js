@@ -5,6 +5,7 @@ var QuadTree = window.QuadTree = require('./core/quadTree.js'),
     clock                      = require('./core/clock'),
     boxFactory                 = require('./models/boxFactory'),
     bouncyBoxFactory           = require('./models/bouncyBoxFactory'),
+    asteroidFactory            = require('./models/asteroidFactory'),
     explosionFactory           = require('./models/explosionFactory'),
     shipFactory                = require('./models/shipFactory'),
     planetFactory              = require('./models/planetFactory'),
@@ -51,16 +52,13 @@ function init () {
 
     var negX   = Math.random() < 0.5,
         negY   = Math.random() < 0.5,
-        negSpin = Math.random() < 0.5,
-        spin    = (negSpin ? -1 : 1) * Math.getRandomInt(0, 25) / 1000,
         angleX = Math.random(),
         angleY = Math.random(),
-        width  = Math.getRandomInt(25,100);
+        radius  = Math.getRandomInt(25,75);
 
-    map.insert(bouncyBoxFactory({
+    map.insert(asteroidFactory({
 
-    'width' : width,
-    'height': width,
+    'radius': radius,
 
     'quadTree' : map,
 
@@ -74,7 +72,6 @@ function init () {
       'y': negY ? - angleY : angleY
     },
 
-    'spin': spin,
 
     'color': '#'+Math.floor(Math.random()*16777215).toString(16)
     

@@ -468,7 +468,7 @@ module.exports = [,,,
 'use strict';
 
 module.exports = require('../../../../js/quadtree.js');
-},{"../../../../js/quadtree.js":17}],7:[function(require,module,exports){
+},{"../../../../js/quadtree.js":18}],7:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -793,7 +793,7 @@ module.exports = (function () {
   };
 
 }());
-},{"../util/math/bounds":15,"../util/math/vector":16,"./clock":1,"./fullScreenDisplay":3,"./quadTree":6,"underscore":18}],8:[function(require,module,exports){
+},{"../util/math/bounds":16,"../util/math/vector":17,"./clock":1,"./fullScreenDisplay":3,"./quadTree":6,"underscore":19}],8:[function(require,module,exports){
 'use strict';
 
 
@@ -801,6 +801,7 @@ var QuadTree = window.QuadTree = require('./core/quadTree.js'),
     clock                      = require('./core/clock'),
     boxFactory                 = require('./models/boxFactory'),
     bouncyBoxFactory           = require('./models/bouncyBoxFactory'),
+    asteroidFactory            = require('./models/asteroidFactory'),
     explosionFactory           = require('./models/explosionFactory'),
     shipFactory                = require('./models/shipFactory'),
     planetFactory              = require('./models/planetFactory'),
@@ -847,16 +848,13 @@ function init () {
 
     var negX   = Math.random() < 0.5,
         negY   = Math.random() < 0.5,
-        negSpin = Math.random() < 0.5,
-        spin    = (negSpin ? -1 : 1) * Math.getRandomInt(0, 25) / 1000,
         angleX = Math.random(),
         angleY = Math.random(),
-        width  = Math.getRandomInt(25,100);
+        radius  = Math.getRandomInt(25,75);
 
-    map.insert(bouncyBoxFactory({
+    map.insert(asteroidFactory({
 
-    'width' : width,
-    'height': width,
+    'radius': radius,
 
     'quadTree' : map,
 
@@ -870,7 +868,6 @@ function init () {
       'y': negY ? - angleY : angleY
     },
 
-    'spin': spin,
 
     'color': '#'+Math.floor(Math.random()*16777215).toString(16)
     
@@ -896,7 +893,169 @@ function init () {
 }
 
 window.addEventListener('DOMContentLoaded', init);
-},{"./core/clock":1,"./core/quadTree.js":6,"./core/viewport":7,"./models/bouncyBoxFactory":9,"./models/boxFactory":10,"./models/explosionFactory":12,"./models/planetFactory":13,"./models/shipFactory":14}],9:[function(require,module,exports){
+},{"./core/clock":1,"./core/quadTree.js":6,"./core/viewport":7,"./models/asteroidFactory":9,"./models/bouncyBoxFactory":10,"./models/boxFactory":11,"./models/explosionFactory":13,"./models/planetFactory":14,"./models/shipFactory":15}],9:[function(require,module,exports){
+'use strict';
+
+var _ = require('underscore');
+
+module.exports = (function () {
+
+  var createVector = require('../util/math/vector'),
+      clock        = require('../core/clock');
+
+  var asteroidPrototype = {
+
+    'x': 0,
+    'y': 0,
+
+    'radius': 25,
+
+    'color': 'green',
+
+    'border': 'blue',
+
+    'lineWidth': 2,
+    'z-index': 50,
+
+    'angle'   : {},
+    
+    // 'rotation': {},
+    // 'spin': 0,
+    
+    'mass': 30,
+    'force': 1,
+
+    'maxSpeed': 3,
+
+    'breaks': 2,
+
+    'isAsteroid': true,
+
+    'removeNextUpdate': false,
+    
+
+    'sim'  : clock.UPDATE_BUFFER,
+
+    // 'getRotation': function () {
+    //     return this.rotation.toRadians();
+    // },
+
+    'impact': function () {
+      
+      var quadTree = this.quadTree;
+      
+      this.removeNextUpdate = true;
+      
+      if (this.breaks === 0) {
+      } else {
+      
+        var color = this.color;
+        quadTree.insert(create({
+          'x': this.x,
+          'y': this.y,
+          'width': this.width * 0.6,
+          'height': this.height * 0.6,
+          'speed': this.speed * 1.1,
+          'angle': {
+            'x': Math.getRandomInt(-180, 180),
+            'y': Math.getRandomInt(-180, 180)
+          },
+          'spin': (Math.random() < 0.5 ? -1 : 1) * Math.getRandomInt(0, 25) / 1000,
+          'color': color,
+          'breaks': this.breaks - 1,
+          'quadTree': quadTree
+        }));
+        quadTree.insert(create({
+          'x': this.x,
+          'y': this.y,
+          'width': this.width * 0.6,
+          'angle': {
+            'x': Math.getRandomInt(-180, 180),
+            'y': Math.getRandomInt(-180, 180)
+          },
+          'height': this.height * 0.6,
+          'speed': this.speed * 1.1,
+          'breaks': this.breaks - 1,
+          'color': color,
+          'quadTree': quadTree
+        }));
+
+      }
+
+    },
+
+    'updatePosition': function () {
+
+      this.add(this.velocity);
+      this.move(this.x, this.y);
+    },
+
+    // 'updateRotation': function () {
+
+    //   this.rotation.rotate(this.spin);
+        
+ 
+    // },
+
+    'updateVelocity': function () {
+      this.velocity.add(this.angle.normalize().mult(this.force / this.mass));
+
+      this.velocity.mult(this.maxSpeed / this.velocity.length());
+    },
+
+    'limitVelocity': function () {
+      if (this.velocity.length() > this.maxSpeed) {
+      }
+    },
+    'update': function () {
+
+      if (this.removeNextUpdate) {
+        this.off('update');
+        this.remove();
+        this.removed = true;
+        return;
+      }
+      
+      // this.updateRotation();
+      this.updatePosition();
+    
+    },
+
+    'render': function (ctx, viewport) {
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius * viewport.scale, 0, 2 * Math.PI, false);
+      ctx.fill();
+      ctx.closePath();
+    }
+
+  };
+
+  function init(newAsteroid) {
+
+    _.extend(newAsteroid, createVector(newAsteroid.x, newAsteroid.y));
+
+    newAsteroid.width = newAsteroid.radius * 2;
+    newAsteroid.height = newAsteroid.radius * 2;
+    newAsteroid.angle = createVector(newAsteroid.angle.x, newAsteroid.angle.y);
+    
+    newAsteroid.velocity = createVector(Math.random() * (Math.random() < 0.5 ? 1 : -1), Math.random() * (Math.random() < 0.5 ? 1 : -1));
+    // newAsteroid.rotation = createVector(Math.getRandomInt(0, 100) / 100, Math.getRandomInt(0, 100) / 100);
+
+    newAsteroid.on('update', newAsteroid.update);
+
+    return newAsteroid;
+
+  }
+
+  function create (config) {
+    return init(_.extend(Object.create(asteroidPrototype), config));
+  }
+
+  return create;
+
+}());
+},{"../core/clock":1,"../util/math/vector":17,"underscore":19}],10:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -943,9 +1102,9 @@ module.exports = (function () {
         return this.rotation.toRadians();
     },
 
-    'impact': function () {
+    'impact': function (object) {
       var quadTree = this.quadTree;
-        this.removeNextUpdate = true;
+      this.removeNextUpdate = true;
       if (this.breaks === 0) {
       } else {
         var color = this.color;
@@ -1050,7 +1209,7 @@ module.exports = (function () {
   return create;
 
 }());
-},{"../core/clock":1,"../util/math/vector":16,"underscore":18}],10:[function(require,module,exports){
+},{"../core/clock":1,"../util/math/vector":17,"underscore":19}],11:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -1081,7 +1240,7 @@ module.exports = (function () {
   };
 
 }());                   
-},{"underscore":18}],11:[function(require,module,exports){
+},{"underscore":19}],12:[function(require,module,exports){
 'use strict';
 var _ = require('underscore');
 module.exports = (function () {
@@ -1147,7 +1306,7 @@ module.exports = (function () {
   };
 
 }());
-},{"../core/clock":1,"../util/math/vector":16,"underscore":18}],12:[function(require,module,exports){
+},{"../core/clock":1,"../util/math/vector":17,"underscore":19}],13:[function(require,module,exports){
 'use strict';
 // https://gist.github.com/gre/1650294
 var _ = require('underscore');
@@ -1191,7 +1350,7 @@ module.exports = (function () {
   };
 
 }());
-},{"underscore":18}],13:[function(require,module,exports){
+},{"underscore":19}],14:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -1208,8 +1367,6 @@ module.exports = (function () {
   var planetPrototype = {
     'x': 0,
     'y': 0,
-    'width': 835 * 2,
-    'height': 835 * 2,
     'radius': 835,
     'color': 'green',
     'z-index': 10,
@@ -1236,6 +1393,8 @@ module.exports = (function () {
   };
 
   function init(newPlanet) {
+    newPlanet.width = newPlanet.radius * 2;
+    newPlanet.height = newPlanet.radius * 2;
     newPlanet.on('update', newPlanet.update);
     return newPlanet;    
 
@@ -1246,7 +1405,7 @@ module.exports = (function () {
   };
 
 }());                   
-},{"underscore":18}],14:[function(require,module,exports){
+},{"underscore":19}],15:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -1495,7 +1654,7 @@ module.exports = (function () {
   };
 
 }());
-},{"../core/clock":1,"../util/math/vector":16,"./bulletFactory":11,"./explosionFactory":12,"underscore":18}],15:[function(require,module,exports){
+},{"../core/clock":1,"../util/math/vector":17,"./bulletFactory":12,"./explosionFactory":13,"underscore":19}],16:[function(require,module,exports){
 'use strict';
 
 module.exports = function (obj) {
@@ -1511,7 +1670,7 @@ module.exports = function (obj) {
   };
 };
 
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -1596,7 +1755,7 @@ module.exports = (function () {
 
 }());
 
-},{"underscore":18}],17:[function(require,module,exports){
+},{"underscore":19}],18:[function(require,module,exports){
 'use strict';
 
 var _ = window._ = require('underscore');
@@ -2165,8 +2324,17 @@ function isWithinBounds (r1, r2) {
  *                *     *
  *                * * * * 
  */
-function isIntersecting (r1, r2) {
+function isIntersecting (r1, r2) { 
 
+  if (r1.radius && r2.radius) {
+    return isIntersectingCircles(r1, r2);
+  } else {
+    return isIntersectingSquares(r1, r2);
+  }
+
+}
+
+function isIntersectingSquares (r1, r2) {
   var r1Bounds = getBounds(r1),
       r2Bounds = getBounds(r2);
       
@@ -2175,6 +2343,15 @@ function isIntersecting (r1, r2) {
           r1Bounds.top    < r2Bounds.bottom &&
           r1Bounds.bottom > r2Bounds.top);
 
+}
+
+function isIntersectingCircles (c1, c2) {
+  
+  var dx       = c1.x - c2.x,
+      dy       = c1.y - c2.y,
+      distance = Math.sqrt(dx * dx + dy * dy);
+
+  return distance < c1.radius + c2.radius;
 }
 
 function getCollisions (comparisonList, rect) {
@@ -2227,7 +2404,7 @@ function forceObjectWithinBounds (object, rect) {
 }
 
 module.exports = Quadtree;
-},{"underscore":18}],18:[function(require,module,exports){
+},{"underscore":19}],19:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors

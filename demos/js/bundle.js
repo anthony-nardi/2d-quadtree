@@ -982,8 +982,17 @@ function isWithinBounds (r1, r2) {
  *                *     *
  *                * * * * 
  */
-function isIntersecting (r1, r2) {
+function isIntersecting (r1, r2) { 
 
+  if (r1.radius && r2.radius) {
+    return isIntersectingCircles(r1, r2);
+  } else {
+    return isIntersectingSquares(r1, r2);
+  }
+
+}
+
+function isIntersectingSquares (r1, r2) {
   var r1Bounds = getBounds(r1),
       r2Bounds = getBounds(r2);
       
@@ -992,6 +1001,15 @@ function isIntersecting (r1, r2) {
           r1Bounds.top    < r2Bounds.bottom &&
           r1Bounds.bottom > r2Bounds.top);
 
+}
+
+function isIntersectingCircles (c1, c2) {
+  
+  var dx       = c1.x - c2.x,
+      dy       = c1.y - c2.y,
+      distance = Math.sqrt(dx * dx + dy * dy);
+
+  return distance < c1.radius + c2.radius;
 }
 
 function getCollisions (comparisonList, rect) {
