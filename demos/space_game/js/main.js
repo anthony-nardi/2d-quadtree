@@ -50,7 +50,7 @@ function init () {
         'static': true,
         'viewport': myViewport
       });
-      // map.insert(turretFactory());
+      map.insert(newTurret);
     }
   });
 

@@ -29,7 +29,6 @@ module.exports = (function () {
   
   window.addEventListener('click', function (event) {
     mouse.click = event;
-    console.log(event)
   });
 
   return {

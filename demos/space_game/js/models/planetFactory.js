@@ -18,6 +18,7 @@ module.exports = (function () {
     'color': 'green',
     'z-index': 10,
     'border': 'blue',
+    'isPlanet': true,
     'update':function () {
 
       var collidesList = this.getCollisions();
