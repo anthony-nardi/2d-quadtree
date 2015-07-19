@@ -24,7 +24,9 @@ module.exports = (function () {
 
     dtBuffer += now - last;
 
-    events.fire('input', inputs);
+    events.fire('input', inputs.getKey);
+    
+    inputs.resetMouse();
 
     while (dtBuffer >= UPDATE_BUFFER) {
       events.fire('update');
@@ -224,6 +226,7 @@ module.exports = (function () {
 
 
   var keys = require('./keys'),
+      mouse = ['mousedown', 'mouseup', 'click', 'move'],
       inputState = [];
 
   window.addEventListener('keydown', function (event) {
@@ -234,8 +237,33 @@ module.exports = (function () {
   	inputState[event.which] = false;
   });
 
-  return function (key) {
-    return (true === inputState[keys.indexOf(key)]);
+  // window.addEventListener('mousedown', function (event) {
+  //   inputState.mouseDown = event;
+  // });
+
+  // window.addEventListener('mouseup', function (event) {
+  //   inputState.mouseUp = event;
+  // });
+  
+  window.addEventListener('mousemove', function (event) {
+    mouse.mousemove = event;
+  });
+  
+  window.addEventListener('click', function (event) {
+    mouse.click = event;
+    console.log(event)
+  });
+
+  return {
+    'getKey': function (key) {
+      return (mouse[key] || inputState[keys.indexOf(key)]);
+    },
+    'resetMouse': function () {
+      mouse.mousedown = false;
+      mouse.mouseup   = false;
+      mouse.click     = false;
+      mouse.mousemove = false;
+    }
   };
 
 }());
@@ -468,7 +496,7 @@ module.exports = [,,,
 'use strict';
 
 module.exports = require('../../../../js/quadtree.js');
-},{"../../../../js/quadtree.js":18}],7:[function(require,module,exports){
+},{"../../../../js/quadtree.js":20}],7:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -793,23 +821,25 @@ module.exports = (function () {
   };
 
 }());
-},{"../util/math/bounds":16,"../util/math/vector":17,"./clock":1,"./fullScreenDisplay":3,"./quadTree":6,"underscore":19}],8:[function(require,module,exports){
+},{"../util/math/bounds":18,"../util/math/vector":19,"./clock":1,"./fullScreenDisplay":3,"./quadTree":6,"underscore":21}],8:[function(require,module,exports){
 'use strict';
 
 
 var QuadTree = window.QuadTree = require('./core/quadTree.js'),
     clock                      = require('./core/clock'),
     boxFactory                 = require('./models/boxFactory'),
-    bouncyBoxFactory           = require('./models/bouncyBoxFactory'),
     asteroidFactory            = require('./models/asteroidFactory'),
     explosionFactory           = require('./models/explosionFactory'),
     shipFactory                = require('./models/shipFactory'),
     planetFactory              = require('./models/planetFactory'),
+    events                     = require('./core/events.js'),
+    textFactory                = require('./models/textFactory'),
+    buttonFactory              = require('./models/buttonFactory'),
+    turretFactory              = require('./models/turretFactory'),
     map                        = new QuadTree({
       'width': 10000,
       'height': 10000
     });
-
 
 function init () {
     
@@ -819,7 +849,54 @@ function init () {
     'quadTree': map
   });
 
+  var money = textFactory({
+    'information': '$10000',
+    'viewport': myViewport,
+    'color': '#94cd4b',
+    'static': true,
+    'x': 10,
+    'y': 20,
+    'font': '2em Georgia'
+  });
 
+  var turretButton = buttonFactory({
+    'x': 25,
+    'y': 40,
+    'img': (function () {
+      var img = new Image();
+      img.src = 'turretButton.png';
+      return img;
+    }()),
+    'viewport': myViewport,
+    'static': true,
+    'onClick': function () {
+      var newTurret = turretFactory({
+        'static': true,
+        'viewport': myViewport
+      });
+      // map.insert(turretFactory());
+    }
+  });
+
+  function createNewPlayerShip () {
+    setTimeout(function () {
+      var myShip = shipFactory({
+        'angle':{
+          'x':0.5,
+          'y':0
+        },
+        'quadTree': map,
+        'viewport': myViewport
+      });
+
+      map.insert(myShip);
+
+      
+
+      myViewport.follow(myShip);
+    }, 3000);
+  }
+ 
   map.insert(planetFactory());
   
   var myShip = shipFactory({
@@ -890,10 +967,12 @@ function init () {
   window.myViewport = myViewport;
   window.explosionFactory = explosionFactory;
 
+  events.on('playerDead', createNewPlayerShip);
+
 }
 
 window.addEventListener('DOMContentLoaded', init);
-},{"./core/clock":1,"./core/quadTree.js":6,"./core/viewport":7,"./models/asteroidFactory":9,"./models/bouncyBoxFactory":10,"./models/boxFactory":11,"./models/explosionFactory":13,"./models/planetFactory":14,"./models/shipFactory":15}],9:[function(require,module,exports){
+},{"./core/clock":1,"./core/events.js":2,"./core/quadTree.js":6,"./core/viewport":7,"./models/asteroidFactory":9,"./models/boxFactory":10,"./models/buttonFactory":12,"./models/explosionFactory":13,"./models/planetFactory":14,"./models/shipFactory":15,"./models/textFactory":16,"./models/turretFactory":17}],9:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -919,9 +998,6 @@ module.exports = (function () {
 
     'angle'   : {},
     
-    // 'rotation': {},
-    // 'spin': 0,
-    
     'mass': 30,
     'force': 1,
 
@@ -936,9 +1012,7 @@ module.exports = (function () {
 
     'sim'  : clock.UPDATE_BUFFER,
 
-    // 'getRotation': function () {
-    //     return this.rotation.toRadians();
-    // },
+
 
     'impact': function () {
       
@@ -953,8 +1027,7 @@ module.exports = (function () {
         quadTree.insert(create({
           'x': this.x,
           'y': this.y,
-          'width': this.width * 0.6,
-          'height': this.height * 0.6,
+          'radius': this.radius * 0.7,
           'speed': this.speed * 1.1,
           'angle': {
             'x': Math.getRandomInt(-180, 180),
@@ -968,15 +1041,15 @@ module.exports = (function () {
         quadTree.insert(create({
           'x': this.x,
           'y': this.y,
-          'width': this.width * 0.6,
+          'radius': this.radius * 0.7,
+          'speed': this.speed * 1.1,
           'angle': {
             'x': Math.getRandomInt(-180, 180),
             'y': Math.getRandomInt(-180, 180)
           },
-          'height': this.height * 0.6,
-          'speed': this.speed * 1.1,
-          'breaks': this.breaks - 1,
+          'spin': (Math.random() < 0.5 ? -1 : 1) * Math.getRandomInt(0, 25) / 1000,
           'color': color,
+          'breaks': this.breaks - 1,
           'quadTree': quadTree
         }));
 
@@ -990,12 +1063,7 @@ module.exports = (function () {
       this.move(this.x, this.y);
     },
 
-    // 'updateRotation': function () {
 
-    //   this.rotation.rotate(this.spin);
-        
- 
-    // },
 
     'updateVelocity': function () {
       this.velocity.add(this.angle.normalize().mult(this.force / this.mass));
@@ -1016,7 +1084,6 @@ module.exports = (function () {
         return;
       }
       
-      // this.updateRotation();
       this.updatePosition();
     
     },
@@ -1040,7 +1107,7 @@ module.exports = (function () {
     newAsteroid.angle = createVector(newAsteroid.angle.x, newAsteroid.angle.y);
     
     newAsteroid.velocity = createVector(Math.random() * (Math.random() < 0.5 ? 1 : -1), Math.random() * (Math.random() < 0.5 ? 1 : -1));
-    // newAsteroid.rotation = createVector(Math.getRandomInt(0, 100) / 100, Math.getRandomInt(0, 100) / 100);
+
 
     newAsteroid.on('update', newAsteroid.update);
 
@@ -1055,161 +1122,7 @@ module.exports = (function () {
   return create;
 
 }());
-},{"../core/clock":1,"../util/math/vector":17,"underscore":19}],10:[function(require,module,exports){
-'use strict';
-
-var _ = require('underscore');
-
-module.exports = (function () {
-
-  var createVector = require('../util/math/vector'),
-      clock        = require('../core/clock');
-
-  var boxPrototype = {
-
-    'x': 0,
-    'y': 0,
-
-    'width': 50,
-    'height': 50,
-
-    'color': 'green',
-
-    'border': 'blue',
-
-    'lineWidth': 2,
-    'z-index': 50,
-    'angle'   : {},
-    
-    'rotation': {},
-    'spin': 0,
-    
-    'mass': 30,
-    'force': 1,
-
-    'maxSpeed': 3,
-
-    'breaks': 2,
-
-    'isAsteroid': true,
-
-    'removeNextUpdate': false,
-    
-
-    'sim'  : clock.UPDATE_BUFFER,
-
-    'getRotation': function () {
-        return this.rotation.toRadians();
-    },
-
-    'impact': function (object) {
-      var quadTree = this.quadTree;
-      this.removeNextUpdate = true;
-      if (this.breaks === 0) {
-      } else {
-        var color = this.color;
-        quadTree.insert(create({
-          'x': this.x,
-          'y': this.y,
-          'width': this.width * 0.6,
-          'height': this.height * 0.6,
-          'speed': this.speed * 1.1,
-          'angle': {
-            'x': Math.getRandomInt(-180, 180),
-            'y': Math.getRandomInt(-180, 180)
-          },
-          'spin': (Math.random() < 0.5 ? -1 : 1) * Math.getRandomInt(0, 25) / 1000,
-          'color': color,
-          'breaks': this.breaks - 1,
-          'quadTree': quadTree
-        }));
-        quadTree.insert(create({
-          'x': this.x,
-          'y': this.y,
-          'width': this.width * 0.6,
-          'angle': {
-            'x': Math.getRandomInt(-180, 180),
-            'y': Math.getRandomInt(-180, 180)
-          },
-          'height': this.height * 0.6,
-          'speed': this.speed * 1.1,
-          'breaks': this.breaks - 1,
-          'color': color,
-          'quadTree': quadTree
-        }));
-
-      }
-
-    },
-
-    'updatePosition': function () {
-
-      this.add(this.velocity);
-      this.move(this.x, this.y);
-    },
-
-    'updateRotation': function () {
-
-      this.rotation.rotate(this.spin);
-        
- 
-    },
-
-    'updateVelocity': function () {
-      this.velocity.add(this.angle.normalize().mult(this.force / this.mass));
-
-      this.velocity.mult(this.maxSpeed / this.velocity.length());
-    },
-
-    'limitVelocity': function () {
-      if (this.velocity.length() > this.maxSpeed) {
-      }
-    },
-    'update': function () {
-
-      if (this.removeNextUpdate) {
-        this.off('update');
-        this.remove();
-        this.removed = true;
-        return;
-      }
-      
-      this.updateRotation();
-      this.updatePosition();
-    
-    },
-
-    'render': function (ctx, viewport) {
-      ctx.fillStyle = this.color;
-      ctx.lineWidth = this.lineWidth * viewport.scale;
-      ctx.fillRect(-this.width * viewport.scale / 2, -this.height* viewport.scale / 2, this.width * viewport.scale, this.height * viewport.scale);
-    }
-
-  };
-
-  function init(newBox) {
-
-    _.extend(newBox, createVector(newBox.x, newBox.y));
-
-    newBox.angle = createVector(newBox.angle.x, newBox.angle.y);
-    
-    newBox.velocity = createVector(Math.random() * (Math.random() < 0.5 ? 1 : -1), Math.random() * (Math.random() < 0.5 ? 1 : -1));
-    newBox.rotation = createVector(Math.getRandomInt(0, 100) / 100, Math.getRandomInt(0, 100) / 100);
-
-    newBox.on('update', newBox.update);
-
-    return newBox;
-
-  }
-
-  function create (config) {
-    return init(_.extend(Object.create(boxPrototype), config));
-  }
-
-  return create;
-
-}());
-},{"../core/clock":1,"../util/math/vector":17,"underscore":19}],11:[function(require,module,exports){
+},{"../core/clock":1,"../util/math/vector":19,"underscore":21}],10:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -1240,7 +1153,7 @@ module.exports = (function () {
   };
 
 }());                   
-},{"underscore":19}],12:[function(require,module,exports){
+},{"underscore":21}],11:[function(require,module,exports){
 'use strict';
 var _ = require('underscore');
 module.exports = (function () {
@@ -1306,7 +1219,79 @@ module.exports = (function () {
   };
 
 }());
-},{"../core/clock":1,"../util/math/vector":17,"underscore":19}],13:[function(require,module,exports){
+},{"../core/clock":1,"../util/math/vector":19,"underscore":21}],12:[function(require,module,exports){
+'use strict';
+
+var _ = require('underscore');
+
+module.exports = (function () {
+
+  var buttonPrototype = {
+
+    'information': {},
+
+    'x': 0,
+    'y': 0,
+
+    'width': 80,
+    'height': 80,
+
+    'font': '20px Georgia',
+    'z-index': 9999999,
+
+    'color': '#ffffff',
+
+    'disabled': false,
+
+    'render': function (ctx, viewport) {
+
+      var xPos = this.x,
+          yPos = this.y;
+
+      ctx.strokeStyle = this.color;
+      
+      if (this.static) {
+        xPos = this.x + (viewport.x - viewport.width  / 2) * viewport.scale;
+        yPos = this.y + (viewport.y - viewport.height / 2) * viewport.scale;
+      }
+
+      ctx.drawImage(this.img, xPos, yPos, this.width, this.height);
+
+      ctx.strokeRect(xPos, yPos, this.width, this.height);
+
+    },
+
+    'input': function (inputs) {
+
+      var clickEvent = inputs('click');
+
+      if (clickEvent) {
+        if (clickEvent.srcElement.tagName === 'CANVAS') {
+          if (this.isClicked(clickEvent.offsetX, clickEvent.offsetY)) {
+            this.onClick();
+          }
+        }
+      }
+    },
+
+    'isClicked': function (x, y) {
+      return (this.x <= x && this.x + this.width >= x && this.y <= y && this.y + this.height >= y);
+    }
+
+  };
+
+  function init (newButton) {
+    newButton.viewport.addObjectToAlwaysRender(newButton);
+    newButton.on('input',  newButton.input);
+    return newButton;
+  }
+
+  return function (config) {
+    return init(_.extend(Object.create(buttonPrototype), config));
+  };
+
+}());
+},{"underscore":21}],13:[function(require,module,exports){
 'use strict';
 // https://gist.github.com/gre/1650294
 var _ = require('underscore');
@@ -1350,7 +1335,7 @@ module.exports = (function () {
   };
 
 }());
-},{"underscore":19}],14:[function(require,module,exports){
+},{"underscore":21}],14:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -1405,10 +1390,11 @@ module.exports = (function () {
   };
 
 }());                   
-},{"underscore":19}],15:[function(require,module,exports){
+},{"underscore":21}],15:[function(require,module,exports){
 'use strict';
 
-var _ = require('underscore');
+var _ = require('underscore'), 
+    events = require('../core/events.js');
 
 module.exports = (function () {
 
@@ -1524,6 +1510,7 @@ module.exports = (function () {
               this.quadTree.insert(newExplosion);
               this.off('update');
               this.remove();
+              events.fire('playerDead');
             }
           }
 
@@ -1654,7 +1641,183 @@ module.exports = (function () {
   };
 
 }());
-},{"../core/clock":1,"../util/math/vector":17,"./bulletFactory":12,"./explosionFactory":13,"underscore":19}],16:[function(require,module,exports){
+},{"../core/clock":1,"../core/events.js":2,"../util/math/vector":19,"./bulletFactory":11,"./explosionFactory":13,"underscore":21}],16:[function(require,module,exports){
+'use strict';
+var _ = require('underscore');
+module.exports = (function () {
+
+	var textProto = {
+
+    'information': {},
+
+    'x': 0,
+    'y': 0,
+
+    'width': undefined,
+    'height': undefined,
+
+    'font': '20px Georgia',
+    'z-index': 9999999,
+
+    'color': '#ffffff',
+
+    'getText': function () {
+
+      if (typeof this.information === 'string') {
+        return this.information;
+      }
+
+      var text = '';
+
+      for (var key in this.information) {
+        if (this.information.hasOwnProperty(key)) {
+          text += key + ': ' + this.information[key] + '\n';
+        }
+      }
+
+      return text.split('\n');
+
+    },
+
+    'render': function (ctx, viewport) {
+
+      var xPos = this.x,
+          yPos = this.y;
+      
+      if (this.static) {
+        xPos = this.x + (viewport.x - viewport.width  / 2) * viewport.scale;
+        yPos = this.y + (viewport.y - viewport.height / 2) * viewport.scale;
+
+        
+      }
+      var text = this.getText();
+
+      ctx.font = this.font;
+      ctx.fillStyle = this.color;
+
+      
+      ctx.fillText(text, xPos, yPos);
+      
+
+  	}
+
+  };
+
+	function init (newText) {
+		newText.viewport.addObjectToAlwaysRender(newText);
+    return newText;
+	}
+
+	return function (config) {
+    return init(_.extend(Object.create(textProto), config));
+	};
+
+}());
+},{"underscore":21}],17:[function(require,module,exports){
+ 'use strict';
+
+var _ = require('underscore');
+
+module.exports = (function () {
+
+  var createVector = require('../util/math/vector'),
+      clock        = require('../core/clock'),
+      img          = new Image();
+
+  img.src = './turret.png';
+
+  img.onload = function () {
+    img.width  /= 2.5;
+    img.height /= 2.5;
+    console.log('turret image loaded');
+  };
+
+  var turretPrototype = {
+
+    'x': 0,
+    'y': 0,
+    
+    'color': 'green',
+
+    'border': 'blue',
+
+    'lineWidth': 2,
+    'z-index': 50,
+
+    'angle'   : {},
+    'rotation': {},
+    
+    'mass': 30,
+    'force': 1,
+    'isStationary': false,
+
+    'removeNextUpdate': false,
+    
+
+    'sim'  : clock.UPDATE_BUFFER,
+
+    'update': function () {
+
+      if (this.removeNextUpdate) {
+        this.off('update');
+        this.remove();
+        this.removed = true;
+        return;
+      }
+    
+    },
+
+    'input': function (inputs) {
+      var mousemove = inputs('mousemove');
+      if (!this.isStationary && mousemove && mousemove.srcElement.tagName === 'CANVAS') {
+        var coords = this.viewport.translateCanvasCoordinates({
+          'x': mousemove.offsetX,
+          'y': mousemove.offsetY
+        });
+        this.x = coords.x;
+        this.y = coords.y;
+      }
+    },
+
+    'render': function (ctx, viewport) {
+      
+      var xPos = -this.width / 2 * viewport.scale,
+          yPos = -this.height / 2 * viewport.scale;
+
+
+
+      
+      ctx.drawImage(img, xPos, yPos, this.width * viewport.scale, this.height * viewport.scale);
+      ctx.strokeRect(xPos, yPos, this.width * viewport.scale, this.height * viewport.scale);
+    }
+
+  };
+
+  function init(newTurret) {
+
+    _.extend(newTurret, createVector(newTurret.x, newTurret.y));
+
+    if (newTurret.static) {
+      console.log('always render')
+      newTurret.viewport.addObjectToAlwaysRender(newTurret);
+    }
+    newTurret.width  = img.width;
+    newTurret.height = img.height;
+    newTurret.on('update', newTurret.update);
+    newTurret.on('input',  newTurret.input);
+
+    return newTurret;
+
+  }
+
+  function create (config) {
+    return init(_.extend(Object.create(turretPrototype), config));
+  }
+
+  return create;
+
+}());
+},{"../core/clock":1,"../util/math/vector":19,"underscore":21}],18:[function(require,module,exports){
 'use strict';
 
 module.exports = function (obj) {
@@ -1670,7 +1833,7 @@ module.exports = function (obj) {
   };
 };
 
-},{}],17:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -1755,7 +1918,7 @@ module.exports = (function () {
 
 }());
 
-},{"underscore":19}],18:[function(require,module,exports){
+},{"underscore":21}],20:[function(require,module,exports){
 'use strict';
 
 var _ = window._ = require('underscore');
@@ -2404,7 +2567,7 @@ function forceObjectWithinBounds (object, rect) {
 }
 
 module.exports = Quadtree;
-},{"underscore":19}],19:[function(require,module,exports){
+},{"underscore":21}],21:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors

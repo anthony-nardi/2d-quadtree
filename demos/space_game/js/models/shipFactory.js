@@ -1,6 +1,7 @@
 'use strict';
 
-var _ = require('underscore');
+var _ = require('underscore'), 
+    events = require('../core/events.js');
 
 module.exports = (function () {
 
@@ -116,6 +117,7 @@ module.exports = (function () {
               this.quadTree.insert(newExplosion);
               this.off('update');
               this.remove();
+              events.fire('playerDead');
             }
           }
 

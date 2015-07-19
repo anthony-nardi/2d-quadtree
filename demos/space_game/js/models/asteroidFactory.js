@@ -23,9 +23,6 @@ module.exports = (function () {
 
     'angle'   : {},
     
-    // 'rotation': {},
-    // 'spin': 0,
-    
     'mass': 30,
     'force': 1,
 
@@ -40,9 +37,7 @@ module.exports = (function () {
 
     'sim'  : clock.UPDATE_BUFFER,
 
-    // 'getRotation': function () {
-    //     return this.rotation.toRadians();
-    // },
+
 
     'impact': function () {
       
@@ -57,8 +52,7 @@ module.exports = (function () {
         quadTree.insert(create({
           'x': this.x,
           'y': this.y,
-          'width': this.width * 0.6,
-          'height': this.height * 0.6,
+          'radius': this.radius * 0.7,
           'speed': this.speed * 1.1,
           'angle': {
             'x': Math.getRandomInt(-180, 180),
@@ -72,15 +66,15 @@ module.exports = (function () {
         quadTree.insert(create({
           'x': this.x,
           'y': this.y,
-          'width': this.width * 0.6,
+          'radius': this.radius * 0.7,
+          'speed': this.speed * 1.1,
           'angle': {
             'x': Math.getRandomInt(-180, 180),
             'y': Math.getRandomInt(-180, 180)
           },
-          'height': this.height * 0.6,
-          'speed': this.speed * 1.1,
-          'breaks': this.breaks - 1,
+          'spin': (Math.random() < 0.5 ? -1 : 1) * Math.getRandomInt(0, 25) / 1000,
           'color': color,
+          'breaks': this.breaks - 1,
           'quadTree': quadTree
         }));
 
@@ -94,12 +88,7 @@ module.exports = (function () {
       this.move(this.x, this.y);
     },
 
-    // 'updateRotation': function () {
 
-    //   this.rotation.rotate(this.spin);
-        
- 
-    // },
 
     'updateVelocity': function () {
       this.velocity.add(this.angle.normalize().mult(this.force / this.mass));
@@ -120,7 +109,6 @@ module.exports = (function () {
         return;
       }
       
-      // this.updateRotation();
       this.updatePosition();
     
     },
@@ -144,7 +132,7 @@ module.exports = (function () {
     newAsteroid.angle = createVector(newAsteroid.angle.x, newAsteroid.angle.y);
     
     newAsteroid.velocity = createVector(Math.random() * (Math.random() < 0.5 ? 1 : -1), Math.random() * (Math.random() < 0.5 ? 1 : -1));
-    // newAsteroid.rotation = createVector(Math.getRandomInt(0, 100) / 100, Math.getRandomInt(0, 100) / 100);
+
 
     newAsteroid.on('update', newAsteroid.update);
 

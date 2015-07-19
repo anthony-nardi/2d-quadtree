@@ -1,8 +1,8 @@
 'use strict';
-
+var _ = require('underscore');
 module.exports = (function () {
 
-	var logProto = {
+	var textProto = {
 
     'information': {},
 
@@ -13,10 +13,15 @@ module.exports = (function () {
     'height': undefined,
 
     'font': '20px Georgia',
+    'z-index': 9999999,
 
     'color': '#ffffff',
 
     'getText': function () {
+
+      if (typeof this.information === 'string') {
+        return this.information;
+      }
 
       var text = '';
 
@@ -32,26 +37,35 @@ module.exports = (function () {
 
     'render': function (ctx, viewport) {
 
+      var xPos = this.x,
+          yPos = this.y;
+      
+      if (this.static) {
+        xPos = this.x + (viewport.x - viewport.width  / 2) * viewport.scale;
+        yPos = this.y + (viewport.y - viewport.height / 2) * viewport.scale;
+
+        
+      }
       var text = this.getText();
 
       ctx.font = this.font;
       ctx.fillStyle = this.color;
 
-      for (var i = 0; i < text.length; i += 1) {
-        ctx.fillText(text[i], 0, i * 20);
-      }
+      
+      ctx.fillText(text, xPos, yPos);
+      
 
   	}
 
   };
 
-	function init (newLog) {
-		newLog.viewport.addObjectToAlwaysRender(newLog);
-    return newLog;
+	function init (newText) {
+		newText.viewport.addObjectToAlwaysRender(newText);
+    return newText;
 	}
 
 	return function (config) {
-    return init(Object.create(logProto).extend(config));
+    return init(_.extend(Object.create(textProto), config));
 	};
 
 }());

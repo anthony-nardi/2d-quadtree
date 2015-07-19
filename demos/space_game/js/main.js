@@ -4,16 +4,18 @@
 var QuadTree = window.QuadTree = require('./core/quadTree.js'),
     clock                      = require('./core/clock'),
     boxFactory                 = require('./models/boxFactory'),
-    bouncyBoxFactory           = require('./models/bouncyBoxFactory'),
     asteroidFactory            = require('./models/asteroidFactory'),
     explosionFactory           = require('./models/explosionFactory'),
     shipFactory                = require('./models/shipFactory'),
     planetFactory              = require('./models/planetFactory'),
+    events                     = require('./core/events.js'),
+    textFactory                = require('./models/textFactory'),
+    buttonFactory              = require('./models/buttonFactory'),
+    turretFactory              = require('./models/turretFactory'),
     map                        = new QuadTree({
       'width': 10000,
       'height': 10000
     });
-
 
 function init () {
     
@@ -23,7 +25,54 @@ function init () {
     'quadTree': map
   });
 
+  var money = textFactory({
+    'information': '$10000',
+    'viewport': myViewport,
+    'color': '#94cd4b',
+    'static': true,
+    'x': 10,
+    'y': 20,
+    'font': '2em Georgia'
+  });
 
+  var turretButton = buttonFactory({
+    'x': 25,
+    'y': 40,
+    'img': (function () {
+      var img = new Image();
+      img.src = 'turretButton.png';
+      return img;
+    }()),
+    'viewport': myViewport,
+    'static': true,
+    'onClick': function () {
+      var newTurret = turretFactory({
+        'static': true,
+        'viewport': myViewport
+      });
+      // map.insert(turretFactory());
+    }
+  });
+
+  function createNewPlayerShip () {
+    setTimeout(function () {
+      var myShip = shipFactory({
+        'angle':{
+          'x':0.5,
+          'y':0
+        },
+        'quadTree': map,
+        'viewport': myViewport
+      });
+
+      map.insert(myShip);
+
+      
+
+      myViewport.follow(myShip);
+    }, 3000);
+  }
+ 
   map.insert(planetFactory());
   
   var myShip = shipFactory({
@@ -93,6 +142,8 @@ function init () {
   window.clock = clock;
   window.myViewport = myViewport;
   window.explosionFactory = explosionFactory;
+
+  events.on('playerDead', createNewPlayerShip);
 
 }
 

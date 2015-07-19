@@ -23,7 +23,9 @@ module.exports = (function () {
 
     dtBuffer += now - last;
 
-    events.fire('input', inputs);
+    events.fire('input', inputs.getKey);
+    
+    inputs.resetMouse();
 
     while (dtBuffer >= UPDATE_BUFFER) {
       events.fire('update');

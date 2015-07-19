@@ -4,6 +4,7 @@ module.exports = (function () {
 
 
   var keys = require('./keys'),
+      mouse = ['mousedown', 'mouseup', 'click', 'move'],
       inputState = [];
 
   window.addEventListener('keydown', function (event) {
@@ -14,8 +15,33 @@ module.exports = (function () {
   	inputState[event.which] = false;
   });
 
-  return function (key) {
-    return (true === inputState[keys.indexOf(key)]);
+  // window.addEventListener('mousedown', function (event) {
+  //   inputState.mouseDown = event;
+  // });
+
+  // window.addEventListener('mouseup', function (event) {
+  //   inputState.mouseUp = event;
+  // });
+  
+  window.addEventListener('mousemove', function (event) {
+    mouse.mousemove = event;
+  });
+  
+  window.addEventListener('click', function (event) {
+    mouse.click = event;
+    console.log(event)
+  });
+
+  return {
+    'getKey': function (key) {
+      return (mouse[key] || inputState[keys.indexOf(key)]);
+    },
+    'resetMouse': function () {
+      mouse.mousedown = false;
+      mouse.mouseup   = false;
+      mouse.click     = false;
+      mouse.mousemove = false;
+    }
   };
 
 }());
