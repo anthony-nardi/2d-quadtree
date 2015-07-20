@@ -4,9 +4,10 @@ var _ = require('underscore');
 
 module.exports = (function () {
 
-  var createVector = require('../util/math/vector'),
-      clock        = require('../core/clock'),
-      img          = new Image();
+  var createVector  = require('../util/math/vector'),
+      clock         = require('../core/clock'),
+      createBullet  = require('./bulletFactory'),
+      img           = new Image();
 
   img.src = './turret.png';
 
@@ -42,6 +43,44 @@ module.exports = (function () {
     
 
     'sim'  : clock.UPDATE_BUFFER,
+
+    'maxBullets': 1,
+    'cooldown': 1,
+    'maxCooldown': 0.1,
+
+    'fireBullet': function () {
+
+      if (this.bullets.length >= this.maxBullets) {
+        return;
+      }
+
+      var newBullet = createBullet({
+        'x': this.x,
+        'y': this.y,
+        'width': 26,
+        'height': 12,
+        'range': 1300,
+        'getRotation': function () { return this.angle.toRadians(); },
+        'angle': createVector(this.angle.y, -this.angle.x)
+      }),
+
+      that = this;
+
+      newBullet.on('update', function () {
+        if (this.traveled > this.range) {
+          that.bullets.splice(that.bullets.indexOf(newBullet, 1));
+          this.off('update');
+          newBullet.remove();
+        }
+      });
+
+      newBullet.onCollision = function () {
+        that.bullets.splice(that.bullets.indexOf(newBullet, 1));
+        this.removeNextUpdate = true;
+      };
+
+      this.bullets.push(this.quadTree.insert(newBullet));
+    },
     
     'getRotation': function () {
       return this.angle.toRadians();
@@ -61,9 +100,9 @@ module.exports = (function () {
       this.newPosition = undefined;
     },
 
-    'resetAngle': function () {
-      this.angle.x = 0;
-      this.angle.y = 4;
+    'resetAngle': function (x, y) {
+      this.angle.x = x || 0;
+      this.angle.y = y || 0;
     },
 
     'update': function () {
@@ -85,16 +124,28 @@ module.exports = (function () {
         for (var i = 0; i < collidesList.length; i++) {
           if (collidesList[i].isPlanet) {
             this.isValidPlacement = true;
-            this.resetAngle();
+            this.resetAngle(0, 1);
             this.updateAngle(Math.atan2(this.y - collidesList[i].y, this.x - collidesList[i].x));
-            this.normalize().mult(collidesList[i].radius + this.height / 2);
+            this.normalize().mult(collidesList[i].radius - 20 + this.height / 2);
             return;
           }
         }
+
         this.resetAngle();
+        
         this.isValidPlacement = false;
         
+      } else {
+
+        if (this.fire && this.cooldown <= 0) {
+          this.fireBullet();
+          this.cooldown  = this.maxCooldown;
+        }
+
+        this.cooldown -= this.sim;
+
       }
+
 
 
     },
@@ -111,6 +162,7 @@ module.exports = (function () {
       if (!this.isStationary && click && click.srcElement.tagName === 'CANVAS' && this.isValidPlacement) {
         this.off('input');
         this.isStationary = true;
+        this.onPlacement();
       }
 
     },
@@ -142,6 +194,8 @@ module.exports = (function () {
     newTurret.angle  = createVector();
     newTurret.on('update', newTurret.update);
     newTurret.on('input',  newTurret.input);
+
+    newTurret.bullets = [];
 
     return newTurret;
 

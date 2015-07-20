@@ -66,7 +66,6 @@ module.exports = (function () {
 
           newBullet.on('update', function () {
             if (this.traveled > this.range) {
-              console.log('Removing bullet');
               that.bullets.splice(that.bullets.indexOf(newBullet, 1));
               this.off('update');
               newBullet.remove();

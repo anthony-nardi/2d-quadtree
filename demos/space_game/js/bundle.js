@@ -836,8 +836,8 @@ var QuadTree = window.QuadTree = require('./core/quadTree.js'),
     buttonFactory              = require('./models/buttonFactory'),
     turretFactory              = require('./models/turretFactory'),
     map                        = new QuadTree({
-      'width': 10000,
-      'height': 10000
+      'width': 20000,
+      'height': 20000
     });
 
 function init () {
@@ -853,50 +853,79 @@ function init () {
     'viewport': myViewport,
     'color': '#94cd4b',
     'static': true,
-    'x': 10,
-    'y': 20,
-    'font': '2em Georgia'
+    'x': 20,
+    'y': 30,
+    'font': '2em Georgia',
+    'value': 10000
   });
 
   var turretButton = buttonFactory({
-    'x': 25,
-    'y': 40,
+
+    'x': 35,
+    'y': 50,
     'img': (function () {
       var img = new Image();
       img.src = 'turretButton.png';
       return img;
     }()),
     'viewport': myViewport,
+
     'static': true,
+    
     'onClick': function () {
-      var newTurret = turretFactory({
-        'static': true,
-        'viewport': myViewport
-      });
-      map.insert(newTurret);
+      var turretButton = this;
+      if (money.value >= 1000) {
+
+        money.value = money.value - 1000;
+        money.information = '$' + money.value;
+
+        turretButton.isBusy = true;
+
+        var newTurret = turretFactory({
+          'static': true,
+          'viewport': myViewport,
+          'quadTree': map,
+          'onPlacement': function () {
+            turretButton.isBusy = false;
+          }
+        });
+
+        map.insert(newTurret);
+        
+      }
     }
   });
 
   function createNewPlayerShip () {
-    setTimeout(function () {
-      var myShip = shipFactory({
-        'angle':{
-          'x':0.5,
-          'y':0
-        },
-        'quadTree': map,
-        'viewport': myViewport
-      });
-
-      map.insert(myShip);
-
-      
-
-      myViewport.follow(myShip);
-    }, 3000);
-  }
  
-  map.insert(planetFactory());
+    setTimeout(function () {
+      
+      if (money.value >= 3000) {
+
+        money.value = money.value - 3000;
+        
+        money.information = '$' + money.value;    
+        
+        var myShip = shipFactory({
+          'angle':{
+            'x':0.5,
+            'y':0
+          },
+          'quadTree': map,
+          'viewport': myViewport
+        });
+
+        map.insert(myShip);
+
+        myViewport.follow(myShip);
+
+      }
+    }, 3000);
+
+  }
+  var planet = planetFactory();
+
+  map.insert(planet);
   
   var myShip = shipFactory({
     'angle':{
@@ -919,14 +948,31 @@ function init () {
       return Math.floor(Math.random() * (max - min + 1)) + min;
     };
   }
+
+  function isIntersectingCircles (c1, c2) {
   
+    var dx       = c1.x - c2.x,
+        dy       = c1.y - c2.y,
+        distance = Math.sqrt(dx * dx + dy * dy);
+
+    return distance < c1.radius + c2.radius;
+  }
+
   for (var i = 0; i < 200; i += 1) {
 
     var negX   = Math.random() < 0.5,
         negY   = Math.random() < 0.5,
         angleX = Math.random(),
         angleY = Math.random(),
-        radius  = Math.getRandomInt(25,75);
+        radius = Math.getRandomInt(25,75),
+        randX  = Math.getRandomInt(map.x - map.halfWidth,  map.x  + map.halfWidth),
+        randY  = Math.getRandomInt(map.y - map.halfHeight, map.y + map.halfHeight);
+
+    while (isIntersectingCircles({'x':randX, 'y':randY, 'radius': radius}, {'x':planet.x, 'y':planet.y, 'radius': planet.radius * 4})) {
+      console.log('trying to place asteroid in good location.');
+      randX  = Math.getRandomInt(map.x - map.halfWidth,  map.x  + map.halfWidth);
+      randY  = Math.getRandomInt(map.y - map.halfHeight, map.y + map.halfHeight);
+    }
 
     map.insert(asteroidFactory({
 
@@ -936,19 +982,25 @@ function init () {
 
     'speed': Math.getRandomInt(1, 10),
 
-    'x': Math.getRandomInt(map.x - map.halfWidth,  map.x  + map.halfWidth),
-    'y': Math.getRandomInt(map.y - map.halfHeight, map.y + map.halfHeight),
+    'x': randX,
+    'y': randY,
 
     'angle': {
       'x': negX ? - angleX : angleX,
       'y': negY ? - angleY : angleY
     },
 
+    'onLastImpact': addMoneyWhenAsteroidIsDestroyed,
 
     'color': '#'+Math.floor(Math.random()*16777215).toString(16)
     
     }));
 
+  }
+
+  function addMoneyWhenAsteroidIsDestroyed () {
+    money.value = money.value + 200;
+    money.information = '$' + money.value;
   }
 
   myViewport.addObjectToAlwaysRender(boxFactory({
@@ -1020,6 +1072,9 @@ module.exports = (function () {
       this.removeNextUpdate = true;
       
       if (this.breaks === 0) {
+        if (this.onLastImpact) {
+          this.onLastImpact();
+        }
       } else {
       
         var color = this.color;
@@ -1032,6 +1087,7 @@ module.exports = (function () {
             'x': Math.getRandomInt(-180, 180),
             'y': Math.getRandomInt(-180, 180)
           },
+          'onLastImpact': this.onLastImpact,
           'spin': (Math.random() < 0.5 ? -1 : 1) * Math.getRandomInt(0, 25) / 1000,
           'color': color,
           'breaks': this.breaks - 1,
@@ -1046,6 +1102,7 @@ module.exports = (function () {
             'x': Math.getRandomInt(-180, 180),
             'y': Math.getRandomInt(-180, 180)
           },
+          'onLastImpact': this.onLastImpact,
           'spin': (Math.random() < 0.5 ? -1 : 1) * Math.getRandomInt(0, 25) / 1000,
           'color': color,
           'breaks': this.breaks - 1,
@@ -1098,7 +1155,6 @@ module.exports = (function () {
   };
 
   function init(newAsteroid) {
-
     _.extend(newAsteroid, createVector(newAsteroid.x, newAsteroid.y));
 
     newAsteroid.width = newAsteroid.radius * 2;
@@ -1166,7 +1222,7 @@ module.exports = (function () {
       'y'           : 0,
       'color'       : '#ffffff',
       'angle'       : {},
-      'velocity'    : {},
+    
       'acceleration': {},
       'mass'        : 3,
       'force'       : 20,
@@ -1207,7 +1263,7 @@ module.exports = (function () {
 
     _.extend(newBullet, createVector(newBullet.x, newBullet.y));
     _.extend(newBullet.angle, createVector(newBullet.angle.x, newBullet.angle.y));
-    _.extend(newBullet.velocity, createVector());
+    
     newBullet.on('update', newBullet.update);
 
     return newBullet;
@@ -1229,6 +1285,8 @@ module.exports = (function () {
 
     'information': {},
 
+    'isBusy': false,
+
     'x': 0,
     'y': 0,
 
@@ -1239,8 +1297,6 @@ module.exports = (function () {
     'z-index': 9999999,
 
     'color': '#ffffff',
-
-    'disabled': false,
 
     'render': function (ctx, viewport) {
 
@@ -1261,6 +1317,10 @@ module.exports = (function () {
     },
 
     'input': function (inputs) {
+      
+      if (this.isBusy) {
+        return;
+      }
 
       var clickEvent = inputs('click');
 
@@ -1459,7 +1519,6 @@ module.exports = (function () {
 
           newBullet.on('update', function () {
             if (this.traveled > this.range) {
-              console.log('Removing bullet');
               that.bullets.splice(that.bullets.indexOf(newBullet, 1));
               this.off('update');
               newBullet.remove();
@@ -1720,9 +1779,10 @@ var _ = require('underscore');
 
 module.exports = (function () {
 
-  var createVector = require('../util/math/vector'),
-      clock        = require('../core/clock'),
-      img          = new Image();
+  var createVector  = require('../util/math/vector'),
+      clock         = require('../core/clock'),
+      createBullet  = require('./bulletFactory'),
+      img           = new Image();
 
   img.src = './turret.png';
 
@@ -1758,6 +1818,44 @@ module.exports = (function () {
     
 
     'sim'  : clock.UPDATE_BUFFER,
+
+    'maxBullets': 1,
+    'cooldown': 1,
+    'maxCooldown': 0.1,
+
+    'fireBullet': function () {
+
+      if (this.bullets.length >= this.maxBullets) {
+        return;
+      }
+
+      var newBullet = createBullet({
+        'x': this.x,
+        'y': this.y,
+        'width': 26,
+        'height': 12,
+        'range': 1300,
+        'getRotation': function () { return this.angle.toRadians(); },
+        'angle': createVector(this.angle.y, -this.angle.x)
+      }),
+
+      that = this;
+
+      newBullet.on('update', function () {
+        if (this.traveled > this.range) {
+          that.bullets.splice(that.bullets.indexOf(newBullet, 1));
+          this.off('update');
+          newBullet.remove();
+        }
+      });
+
+      newBullet.onCollision = function () {
+        that.bullets.splice(that.bullets.indexOf(newBullet, 1));
+        this.removeNextUpdate = true;
+      };
+
+      this.bullets.push(this.quadTree.insert(newBullet));
+    },
     
     'getRotation': function () {
       return this.angle.toRadians();
@@ -1777,9 +1875,9 @@ module.exports = (function () {
       this.newPosition = undefined;
     },
 
-    'resetAngle': function () {
-      this.angle.x = 0;
-      this.angle.y = 4;
+    'resetAngle': function (x, y) {
+      this.angle.x = x || 0;
+      this.angle.y = y || 0;
     },
 
     'update': function () {
@@ -1801,16 +1899,28 @@ module.exports = (function () {
         for (var i = 0; i < collidesList.length; i++) {
           if (collidesList[i].isPlanet) {
             this.isValidPlacement = true;
-            this.resetAngle();
+            this.resetAngle(0, 1);
             this.updateAngle(Math.atan2(this.y - collidesList[i].y, this.x - collidesList[i].x));
-            this.normalize().mult(collidesList[i].radius + this.height / 2);
+            this.normalize().mult(collidesList[i].radius - 20 + this.height / 2);
             return;
           }
         }
+
         this.resetAngle();
+        
         this.isValidPlacement = false;
         
+      } else {
+
+        if (this.fire && this.cooldown <= 0) {
+          this.fireBullet();
+          this.cooldown  = this.maxCooldown;
+        }
+
+        this.cooldown -= this.sim;
+
       }
+
 
 
     },
@@ -1827,6 +1937,7 @@ module.exports = (function () {
       if (!this.isStationary && click && click.srcElement.tagName === 'CANVAS' && this.isValidPlacement) {
         this.off('input');
         this.isStationary = true;
+        this.onPlacement();
       }
 
     },
@@ -1859,6 +1970,8 @@ module.exports = (function () {
     newTurret.on('update', newTurret.update);
     newTurret.on('input',  newTurret.input);
 
+    newTurret.bullets = [];
+
     return newTurret;
 
   }
@@ -1870,7 +1983,7 @@ module.exports = (function () {
   return create;
 
 }());
-},{"../core/clock":1,"../util/math/vector":19,"underscore":21}],18:[function(require,module,exports){
+},{"../core/clock":1,"../util/math/vector":19,"./bulletFactory":11,"underscore":21}],18:[function(require,module,exports){
 'use strict';
 
 module.exports = function (obj) {

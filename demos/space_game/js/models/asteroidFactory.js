@@ -46,6 +46,9 @@ module.exports = (function () {
       this.removeNextUpdate = true;
       
       if (this.breaks === 0) {
+        if (this.onLastImpact) {
+          this.onLastImpact();
+        }
       } else {
       
         var color = this.color;
@@ -58,6 +61,7 @@ module.exports = (function () {
             'x': Math.getRandomInt(-180, 180),
             'y': Math.getRandomInt(-180, 180)
           },
+          'onLastImpact': this.onLastImpact,
           'spin': (Math.random() < 0.5 ? -1 : 1) * Math.getRandomInt(0, 25) / 1000,
           'color': color,
           'breaks': this.breaks - 1,
@@ -72,6 +76,7 @@ module.exports = (function () {
             'x': Math.getRandomInt(-180, 180),
             'y': Math.getRandomInt(-180, 180)
           },
+          'onLastImpact': this.onLastImpact,
           'spin': (Math.random() < 0.5 ? -1 : 1) * Math.getRandomInt(0, 25) / 1000,
           'color': color,
           'breaks': this.breaks - 1,
@@ -124,7 +129,6 @@ module.exports = (function () {
   };
 
   function init(newAsteroid) {
-
     _.extend(newAsteroid, createVector(newAsteroid.x, newAsteroid.y));
 
     newAsteroid.width = newAsteroid.radius * 2;

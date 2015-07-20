@@ -11,7 +11,7 @@ module.exports = (function () {
       'y'           : 0,
       'color'       : '#ffffff',
       'angle'       : {},
-      'velocity'    : {},
+    
       'acceleration': {},
       'mass'        : 3,
       'force'       : 20,
@@ -52,7 +52,7 @@ module.exports = (function () {
 
     _.extend(newBullet, createVector(newBullet.x, newBullet.y));
     _.extend(newBullet.angle, createVector(newBullet.angle.x, newBullet.angle.y));
-    _.extend(newBullet.velocity, createVector());
+    
     newBullet.on('update', newBullet.update);
 
     return newBullet;

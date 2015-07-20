@@ -8,6 +8,8 @@ module.exports = (function () {
 
     'information': {},
 
+    'isBusy': false,
+
     'x': 0,
     'y': 0,
 
@@ -18,8 +20,6 @@ module.exports = (function () {
     'z-index': 9999999,
 
     'color': '#ffffff',
-
-    'disabled': false,
 
     'render': function (ctx, viewport) {
 
@@ -40,6 +40,10 @@ module.exports = (function () {
     },
 
     'input': function (inputs) {
+      
+      if (this.isBusy) {
+        return;
+      }
 
       var clickEvent = inputs('click');
 
