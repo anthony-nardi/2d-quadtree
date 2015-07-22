@@ -5,6 +5,9 @@ module.exports = (function () {
 
   var inputs = require('./input'),
   		events = require('./events'),
+      fps    = require('./fps'),
+
+      renderOpsPerSec = Object.create(fps),
 
       UPDATE_BUFFER  = 10,
 
@@ -16,10 +19,10 @@ module.exports = (function () {
 
       looping        = false;
 
-  //renderOpsPerSec = Object.create(fps);
-
   function loop () {
 
+    // renderOpsPerSec.start();
+   
     now = getCurrentTime();
 
     dtBuffer += now - last;
@@ -33,20 +36,17 @@ module.exports = (function () {
       dtBuffer -= UPDATE_BUFFER;
     }
 
-    
     events.fire('render', now);
 
     last = now;
 
     if (looping) {
-    	setTimeout(loop, 1);
+      setTimeout(loop, 0);
     }
 
+    // renderOpsPerSec.end();
+  
   }
-
-  /*
-      PUBLIC METHODS
-   */
 
   function start () {
 
@@ -62,7 +62,7 @@ module.exports = (function () {
   }
 
   function stop () {
-
+    console.log('Clock stoped.');
     looping = false;
 
   }
@@ -74,7 +74,7 @@ module.exports = (function () {
   };
 
 }());
-},{"./events":2,"./input":4}],2:[function(require,module,exports){
+},{"./events":2,"./fps":3,"./input":5}],2:[function(require,module,exports){
 'use strict';
 
 module.exports = (function () {
@@ -179,6 +179,49 @@ module.exports = (function () {
 
 }());
 },{}],3:[function(require,module,exports){
+var events = require('./events');
+
+var prototype = {
+  
+  'start' : function () {
+    
+    if (!this.frames) {
+      this.frames = 0;
+    }
+    
+    if (!this.startTime) {
+      this.startTime = Date.now();
+    }
+
+    if (!this.fps) {
+      this.fps = 0;
+    }
+  
+  },
+  
+  'end' : function () {
+  
+    var time = Date.now();
+
+    this.frames += 1;
+
+    if (time > this.startTime + 1000) {
+      this.fps = Math.round((this.frames * 1000) / (time - this.startTime));
+      this.startTime = time;
+      this.frames = 0;
+      events.fire('fps', this.fps);
+    }
+  
+  }
+
+};
+
+var fps = Object.create(prototype);
+
+module.exports = fps;
+
+
+},{"./events":2}],4:[function(require,module,exports){
 'use strict';
 
 module.exports = (function () {
@@ -219,7 +262,7 @@ module.exports = (function () {
 
 }());
 
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 'use strict';
 
 module.exports = (function () {
@@ -266,7 +309,7 @@ module.exports = (function () {
   };
 
 }());
-},{"./keys":5}],5:[function(require,module,exports){
+},{"./keys":6}],6:[function(require,module,exports){
 module.exports = [,,,
 'CANCEL',
 ,
@@ -491,11 +534,11 @@ module.exports = [,,,
 ,
 'META'];
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 'use strict';
 
 module.exports = require('../../../../js/quadtree.js');
-},{"../../../../js/quadtree.js":20}],7:[function(require,module,exports){
+},{"../../../../js/quadtree.js":21}],8:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -820,7 +863,7 @@ module.exports = (function () {
   };
 
 }());
-},{"../util/math/bounds":18,"../util/math/vector":19,"./clock":1,"./fullScreenDisplay":3,"./quadTree":6,"underscore":21}],8:[function(require,module,exports){
+},{"../util/math/bounds":19,"../util/math/vector":20,"./clock":1,"./fullScreenDisplay":4,"./quadTree":7,"underscore":22}],9:[function(require,module,exports){
 'use strict';
 
 
@@ -857,6 +900,26 @@ function init () {
     'y': 30,
     'font': '2em Georgia',
     'value': 10000
+  });
+
+  var asteroidCountText = textFactory({
+    'information': function () {
+      var allItems = map.getOrphansAndChildren(),
+          count    = 0;
+      for (var i = 0; i < allItems.length; i++) {
+        if (allItems[i].isAsteroid) {
+          count++;
+        }
+      }
+
+      return count + ' asteroids';
+    },
+    'viewport': myViewport,
+    'color': '#e893ff',
+    'static': true,
+    'x': myViewport.width * myViewport.scale - 700,
+    'y': 30,
+    'font': '2em Georgia'
   });
 
   var turretButton = buttonFactory({
@@ -923,7 +986,15 @@ function init () {
     }, 3000);
 
   }
-  var planet = planetFactory();
+  var planet = planetFactory({
+    'health': 50000,
+    'impact': function (object) {
+      this.health -= object.mass;
+      money.value -= 500;
+      money.information = '$' + money.value; 
+      console.log('Planet hit...')
+    }
+  });
 
   map.insert(planet);
   
@@ -990,7 +1061,9 @@ function init () {
       'y': negY ? - angleY : angleY
     },
 
-    'onLastImpact': addMoneyWhenAsteroidIsDestroyed,
+    'value': 300,
+
+    'onImpact': addMoneyWhenAsteroidIsDestroyed,
 
     'color': '#'+Math.floor(Math.random()*16777215).toString(16)
     
@@ -999,7 +1072,7 @@ function init () {
   }
 
   function addMoneyWhenAsteroidIsDestroyed () {
-    money.value = money.value + 200;
+    money.value = money.value + this.value;
     money.information = '$' + money.value;
   }
 
@@ -1007,7 +1080,7 @@ function init () {
     'x': map.x,
     'y': map.y,
     'width': map.width,
-    'height': map.heightwxc
+    'height': map.height
   }));
 
 
@@ -1023,7 +1096,7 @@ function init () {
 }
 
 window.addEventListener('DOMContentLoaded', init);
-},{"./core/clock":1,"./core/events.js":2,"./core/quadTree.js":6,"./core/viewport":7,"./models/asteroidFactory":9,"./models/boxFactory":10,"./models/buttonFactory":12,"./models/explosionFactory":13,"./models/planetFactory":14,"./models/shipFactory":15,"./models/textFactory":16,"./models/turretFactory":17}],9:[function(require,module,exports){
+},{"./core/clock":1,"./core/events.js":2,"./core/quadTree.js":7,"./core/viewport":8,"./models/asteroidFactory":10,"./models/boxFactory":11,"./models/buttonFactory":13,"./models/explosionFactory":14,"./models/planetFactory":15,"./models/shipFactory":16,"./models/textFactory":17,"./models/turretFactory":18}],10:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -1039,6 +1112,7 @@ module.exports = (function () {
     'y': 0,
 
     'radius': 25,
+    'mass'  : 100,
 
     'color': 'green',
 
@@ -1049,10 +1123,11 @@ module.exports = (function () {
 
     'angle'   : {},
     
-    'mass': 30,
     'force': 1,
 
     'maxSpeed': 3,
+
+    'value': 300,
 
     'breaks': 2,
 
@@ -1070,11 +1145,12 @@ module.exports = (function () {
       var quadTree = this.quadTree;
       
       this.removeNextUpdate = true;
+
+      if (this.onImpact) {
+        this.onImpact();
+      }
       
       if (this.breaks === 0) {
-        if (this.onLastImpact) {
-          this.onLastImpact();
-        }
       } else {
       
         var color = this.color;
@@ -1082,12 +1158,14 @@ module.exports = (function () {
           'x': this.x,
           'y': this.y,
           'radius': this.radius * 0.7,
+          'mass': this.mass * 0.7,
           'speed': this.speed * 1.1,
           'angle': {
             'x': Math.getRandomInt(-180, 180),
             'y': Math.getRandomInt(-180, 180)
           },
-          'onLastImpact': this.onLastImpact,
+          'onImpact': this.onImpact,
+          'value': this.value / 2,
           'spin': (Math.random() < 0.5 ? -1 : 1) * Math.getRandomInt(0, 25) / 1000,
           'color': color,
           'breaks': this.breaks - 1,
@@ -1097,12 +1175,14 @@ module.exports = (function () {
           'x': this.x,
           'y': this.y,
           'radius': this.radius * 0.7,
+          'mass': this.mass * 0.7,
           'speed': this.speed * 1.1,
           'angle': {
             'x': Math.getRandomInt(-180, 180),
             'y': Math.getRandomInt(-180, 180)
           },
-          'onLastImpact': this.onLastImpact,
+          'onImpact': this.onImpact,
+          'value': this.value / 2,
           'spin': (Math.random() < 0.5 ? -1 : 1) * Math.getRandomInt(0, 25) / 1000,
           'color': color,
           'breaks': this.breaks - 1,
@@ -1163,6 +1243,7 @@ module.exports = (function () {
     
     newAsteroid.velocity = createVector(Math.random() * (Math.random() < 0.5 ? 1 : -1), Math.random() * (Math.random() < 0.5 ? 1 : -1));
 
+    newAsteroid.mass = newAsteroid.radius * 4;
 
     newAsteroid.on('update', newAsteroid.update);
 
@@ -1177,7 +1258,7 @@ module.exports = (function () {
   return create;
 
 }());
-},{"../core/clock":1,"../util/math/vector":19,"underscore":21}],10:[function(require,module,exports){
+},{"../core/clock":1,"../util/math/vector":20,"underscore":22}],11:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -1208,7 +1289,7 @@ module.exports = (function () {
   };
 
 }());                   
-},{"underscore":21}],11:[function(require,module,exports){
+},{"underscore":22}],12:[function(require,module,exports){
 'use strict';
 var _ = require('underscore');
 module.exports = (function () {
@@ -1274,7 +1355,7 @@ module.exports = (function () {
   };
 
 }());
-},{"../core/clock":1,"../util/math/vector":19,"underscore":21}],12:[function(require,module,exports){
+},{"../core/clock":1,"../util/math/vector":20,"underscore":22}],13:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -1350,7 +1431,7 @@ module.exports = (function () {
   };
 
 }());
-},{"underscore":21}],13:[function(require,module,exports){
+},{"underscore":22}],14:[function(require,module,exports){
 'use strict';
 // https://gist.github.com/gre/1650294
 var _ = require('underscore');
@@ -1394,7 +1475,7 @@ module.exports = (function () {
   };
 
 }());
-},{"underscore":21}],14:[function(require,module,exports){
+},{"underscore":22}],15:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -1423,6 +1504,9 @@ module.exports = (function () {
       for (var i = 0; i < collidesList.length; i += 1) {
         if (collidesList[i].isAsteroid) {
           collidesList[i].impact(this);
+          if (this.impact) {
+            this.impact(collidesList[i]);
+          }
         }
       }
 
@@ -1450,7 +1534,7 @@ module.exports = (function () {
   };
 
 }());                   
-},{"underscore":21}],15:[function(require,module,exports){
+},{"underscore":22}],16:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore'), 
@@ -1700,7 +1784,7 @@ module.exports = (function () {
   };
 
 }());
-},{"../core/clock":1,"../core/events.js":2,"../util/math/vector":19,"./bulletFactory":11,"./explosionFactory":13,"underscore":21}],16:[function(require,module,exports){
+},{"../core/clock":1,"../core/events.js":2,"../util/math/vector":20,"./bulletFactory":12,"./explosionFactory":14,"underscore":22}],17:[function(require,module,exports){
 'use strict';
 var _ = require('underscore');
 module.exports = (function () {
@@ -1722,19 +1806,13 @@ module.exports = (function () {
 
     'getText': function () {
 
-      if (typeof this.information === 'string') {
+      if (typeof this.information === 'string' || typeof this.information === 'number') {
         return this.information;
       }
 
-      var text = '';
-
-      for (var key in this.information) {
-        if (this.information.hasOwnProperty(key)) {
-          text += key + ': ' + this.information[key] + '\n';
-        }
+      if (typeof this.information === 'function') {
+        return this.information();
       }
-
-      return text.split('\n');
 
     },
 
@@ -1772,7 +1850,7 @@ module.exports = (function () {
 	};
 
 }());
-},{"underscore":21}],17:[function(require,module,exports){
+},{"underscore":22}],18:[function(require,module,exports){
  'use strict';
 
 var _ = require('underscore');
@@ -1817,11 +1895,11 @@ module.exports = (function () {
     'removeNextUpdate': false,
     
 
-    'sim'  : clock.UPDATE_BUFFER,
+    'sim'  : clock.UPDATE_BUFFER / 1000,
 
     'maxBullets': 1,
     'cooldown': 1,
-    'maxCooldown': 0.1,
+    'maxCooldown': 3,
 
     'fireBullet': function () {
 
@@ -1912,7 +1990,7 @@ module.exports = (function () {
         
       } else {
 
-        if (this.fire && this.cooldown <= 0) {
+        if (this.cooldown <= 0) {
           this.fireBullet();
           this.cooldown  = this.maxCooldown;
         }
@@ -1983,7 +2061,7 @@ module.exports = (function () {
   return create;
 
 }());
-},{"../core/clock":1,"../util/math/vector":19,"./bulletFactory":11,"underscore":21}],18:[function(require,module,exports){
+},{"../core/clock":1,"../util/math/vector":20,"./bulletFactory":12,"underscore":22}],19:[function(require,module,exports){
 'use strict';
 
 module.exports = function (obj) {
@@ -1999,7 +2077,7 @@ module.exports = function (obj) {
   };
 };
 
-},{}],19:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -2084,7 +2162,7 @@ module.exports = (function () {
 
 }());
 
-},{"underscore":21}],20:[function(require,module,exports){
+},{"underscore":22}],21:[function(require,module,exports){
 'use strict';
 
 var _ = window._ = require('underscore');
@@ -2733,7 +2811,7 @@ function forceObjectWithinBounds (object, rect) {
 }
 
 module.exports = Quadtree;
-},{"underscore":21}],21:[function(require,module,exports){
+},{"underscore":22}],22:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -4283,4 +4361,4 @@ module.exports = Quadtree;
   }
 }.call(this));
 
-},{}]},{},[8]);
+},{}]},{},[9]);

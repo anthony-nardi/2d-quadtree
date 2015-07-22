@@ -42,11 +42,11 @@ module.exports = (function () {
     'removeNextUpdate': false,
     
 
-    'sim'  : clock.UPDATE_BUFFER,
+    'sim'  : clock.UPDATE_BUFFER / 1000,
 
     'maxBullets': 1,
     'cooldown': 1,
-    'maxCooldown': 0.1,
+    'maxCooldown': 3,
 
     'fireBullet': function () {
 
@@ -137,7 +137,7 @@ module.exports = (function () {
         
       } else {
 
-        if (this.fire && this.cooldown <= 0) {
+        if (this.cooldown <= 0) {
           this.fireBullet();
           this.cooldown  = this.maxCooldown;
         }

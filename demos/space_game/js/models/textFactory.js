@@ -19,19 +19,13 @@ module.exports = (function () {
 
     'getText': function () {
 
-      if (typeof this.information === 'string') {
+      if (typeof this.information === 'string' || typeof this.information === 'number') {
         return this.information;
       }
 
-      var text = '';
-
-      for (var key in this.information) {
-        if (this.information.hasOwnProperty(key)) {
-          text += key + ': ' + this.information[key] + '\n';
-        }
+      if (typeof this.information === 'function') {
+        return this.information();
       }
-
-      return text.split('\n');
 
     },
 

@@ -26,6 +26,9 @@ module.exports = (function () {
       for (var i = 0; i < collidesList.length; i += 1) {
         if (collidesList[i].isAsteroid) {
           collidesList[i].impact(this);
+          if (this.impact) {
+            this.impact(collidesList[i]);
+          }
         }
       }
 

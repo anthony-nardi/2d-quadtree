@@ -4,6 +4,9 @@ module.exports = (function () {
 
   var inputs = require('./input'),
   		events = require('./events'),
+      fps    = require('./fps'),
+
+      renderOpsPerSec = Object.create(fps),
 
       UPDATE_BUFFER  = 10,
 
@@ -15,10 +18,10 @@ module.exports = (function () {
 
       looping        = false;
 
-  //renderOpsPerSec = Object.create(fps);
-
   function loop () {
 
+    // renderOpsPerSec.start();
+   
     now = getCurrentTime();
 
     dtBuffer += now - last;
@@ -32,20 +35,17 @@ module.exports = (function () {
       dtBuffer -= UPDATE_BUFFER;
     }
 
-    
     events.fire('render', now);
 
     last = now;
 
     if (looping) {
-    	setTimeout(loop, 1);
+      setTimeout(loop, 0);
     }
 
+    // renderOpsPerSec.end();
+  
   }
-
-  /*
-      PUBLIC METHODS
-   */
 
   function start () {
 
@@ -61,7 +61,7 @@ module.exports = (function () {
   }
 
   function stop () {
-
+    console.log('Clock stoped.');
     looping = false;
 
   }

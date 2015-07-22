@@ -13,6 +13,7 @@ module.exports = (function () {
     'y': 0,
 
     'radius': 25,
+    'mass'  : 100,
 
     'color': 'green',
 
@@ -23,10 +24,11 @@ module.exports = (function () {
 
     'angle'   : {},
     
-    'mass': 30,
     'force': 1,
 
     'maxSpeed': 3,
+
+    'value': 300,
 
     'breaks': 2,
 
@@ -44,11 +46,12 @@ module.exports = (function () {
       var quadTree = this.quadTree;
       
       this.removeNextUpdate = true;
+
+      if (this.onImpact) {
+        this.onImpact();
+      }
       
       if (this.breaks === 0) {
-        if (this.onLastImpact) {
-          this.onLastImpact();
-        }
       } else {
       
         var color = this.color;
@@ -56,12 +59,14 @@ module.exports = (function () {
           'x': this.x,
           'y': this.y,
           'radius': this.radius * 0.7,
+          'mass': this.mass * 0.7,
           'speed': this.speed * 1.1,
           'angle': {
             'x': Math.getRandomInt(-180, 180),
             'y': Math.getRandomInt(-180, 180)
           },
-          'onLastImpact': this.onLastImpact,
+          'onImpact': this.onImpact,
+          'value': this.value / 2,
           'spin': (Math.random() < 0.5 ? -1 : 1) * Math.getRandomInt(0, 25) / 1000,
           'color': color,
           'breaks': this.breaks - 1,
@@ -71,12 +76,14 @@ module.exports = (function () {
           'x': this.x,
           'y': this.y,
           'radius': this.radius * 0.7,
+          'mass': this.mass * 0.7,
           'speed': this.speed * 1.1,
           'angle': {
             'x': Math.getRandomInt(-180, 180),
             'y': Math.getRandomInt(-180, 180)
           },
-          'onLastImpact': this.onLastImpact,
+          'onImpact': this.onImpact,
+          'value': this.value / 2,
           'spin': (Math.random() < 0.5 ? -1 : 1) * Math.getRandomInt(0, 25) / 1000,
           'color': color,
           'breaks': this.breaks - 1,
@@ -137,6 +144,7 @@ module.exports = (function () {
     
     newAsteroid.velocity = createVector(Math.random() * (Math.random() < 0.5 ? 1 : -1), Math.random() * (Math.random() < 0.5 ? 1 : -1));
 
+    newAsteroid.mass = newAsteroid.radius * 4;
 
     newAsteroid.on('update', newAsteroid.update);
 

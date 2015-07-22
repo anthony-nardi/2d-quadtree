@@ -36,6 +36,26 @@ function init () {
     'value': 10000
   });
 
+  var asteroidCountText = textFactory({
+    'information': function () {
+      var allItems = map.getOrphansAndChildren(),
+          count    = 0;
+      for (var i = 0; i < allItems.length; i++) {
+        if (allItems[i].isAsteroid) {
+          count++;
+        }
+      }
+
+      return count + ' asteroids';
+    },
+    'viewport': myViewport,
+    'color': '#e893ff',
+    'static': true,
+    'x': myViewport.width * myViewport.scale - 700,
+    'y': 30,
+    'font': '2em Georgia'
+  });
+
   var turretButton = buttonFactory({
 
     'x': 35,
@@ -100,7 +120,15 @@ function init () {
     }, 3000);
 
   }
-  var planet = planetFactory();
+  var planet = planetFactory({
+    'health': 50000,
+    'impact': function (object) {
+      this.health -= object.mass;
+      money.value -= 500;
+      money.information = '$' + money.value; 
+      console.log('Planet hit...')
+    }
+  });
 
   map.insert(planet);
   
@@ -167,7 +195,9 @@ function init () {
       'y': negY ? - angleY : angleY
     },
 
-    'onLastImpact': addMoneyWhenAsteroidIsDestroyed,
+    'value': 300,
+
+    'onImpact': addMoneyWhenAsteroidIsDestroyed,
 
     'color': '#'+Math.floor(Math.random()*16777215).toString(16)
     
@@ -176,7 +206,7 @@ function init () {
   }
 
   function addMoneyWhenAsteroidIsDestroyed () {
-    money.value = money.value + 200;
+    money.value = money.value + this.value;
     money.information = '$' + money.value;
   }
 
@@ -184,7 +214,7 @@ function init () {
     'x': map.x,
     'y': map.y,
     'width': map.width,
-    'height': map.heightwxc
+    'height': map.height
   }));
 
 
