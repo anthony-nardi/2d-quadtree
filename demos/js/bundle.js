@@ -416,7 +416,7 @@ window.updateCanvas = updateCanvas;
 },{"../../js/quadtree.js":2}],2:[function(require,module,exports){
 'use strict';
 
-var _ = window._ = require('underscore');
+var _ = require('underscore');
 
 var DEFAULT_MAX_CHILDREN = 4,
     DEFAULT_DEPTH        = 4,
@@ -427,6 +427,10 @@ var DEFAULT_MAX_CHILDREN = 4,
     SOUTH_WEST           = 4,
     SOUTH_EAST           = 8;           
 
+/**
+ * [rectPrototype purpose is to extend the rectangles that are inserted into the quadtree with methods]
+ * @type {Object}
+ */
 var rectPrototype = {
 
   'move': function (x, y) {
@@ -451,6 +455,11 @@ var rectPrototype = {
 
 };
 
+/**
+ * [Quadtree is the Quadtree contstructor function.  Whenever the quadtree splits,
+ * this constructor is used to initialize the new nodes of the quadtree.]
+ * @param {Object} options [The only options of concern to you: width, height, maxChildren, depth]
+ */
 function Quadtree (options) {
   
   options = options || {};
@@ -555,7 +564,6 @@ Quadtree.prototype.remove = function (object) {
   } else if (_.contains(orphans, object)) {
     orphans.splice(orphans.indexOf(object), 1);
   } else {
-    debugger;
     throw 'Object not found in quadTree when attempting to remove';
   }
   while (newParent.parent) {
@@ -648,6 +656,10 @@ Quadtree.prototype.collapse = function () {
 
 };
 
+/**
+ * [canCollapse helper that determines if the quadtree should collapse]
+ * @return {[type]} [description]
+ */
 Quadtree.prototype.canCollapse = function () {
   return this.getOrphanAndChildCount() <= this.maxChildren;
 }
@@ -698,6 +710,10 @@ Quadtree.prototype.getChildCount = function () {
 
 };
 
+/**
+ * [getOrphanAndChildCount returns all rectangles that have been inserted into the quadtree]
+ * @return {[type]} [description]
+ */
 Quadtree.prototype.getOrphanAndChildCount = function () {
   return this.getOrphanCount() + this.getChildCount();
 };
@@ -1026,6 +1042,13 @@ function getCollisions (comparisonList, rect) {
 
 }
 
+/**
+ * [forceObjectWithinBounds forces the inserted object into the quadtree bounds.
+ * This makes the quadtree behave like pac-man when he goes into the opening on
+ * the side of the map]
+ * @param  {Object} object [This is the parent-most quadtree]
+ * @param  {Object} rect   [The inserted rectangle]
+ */
 function forceObjectWithinBounds (object, rect) {
 
   var objectBounds    = getBounds(object),
