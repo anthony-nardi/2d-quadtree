@@ -1,14 +1,22 @@
 {
-  "name": "quadtree",
+  "name": "2d-quadtree-js",
   "version": "1.0.0",
-  "description": "Quadtree for games and simulations.",
-  "main": "index.js",
+  "description": "Quadtree for games and simulations",
+  "keywords": [
+    "quadtree",
+    "2d",
+    "javascript",
+    "games",
+    "simulations",
+    "rectangles"
+  ],
+  "main": "js/quadtree.js",
   "scripts": {
     "dev": "parallelshell \"npm run watch\" \"npm run start-server\"",
     "start-server": "node node_modules/http-server/bin/http-server . -a localhost -p 8000",
     "watch": "grunt"
   },
-  "author": "Anthony Nardi",
+  "author": "Anthony Nardi <anthonygt@gmail.com>",
   "license": "ISC",
   "devDependencies": {
     "browserify": "^10.2.0",

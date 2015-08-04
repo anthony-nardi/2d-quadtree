@@ -867,87 +867,128 @@ module.exports = (function () {
 'use strict';
 
 
-var QuadTree = window.QuadTree = require('./core/quadTree.js'),
+var QuadTree                   = require('./core/quadTree.js'),
     clock                      = require('./core/clock'),
     boxFactory                 = require('./models/boxFactory'),
     asteroidFactory            = require('./models/asteroidFactory'),
-    explosionFactory           = require('./models/explosionFactory'),
     shipFactory                = require('./models/shipFactory'),
     planetFactory              = require('./models/planetFactory'),
     events                     = require('./core/events.js'),
     textFactory                = require('./models/textFactory'),
     buttonFactory              = require('./models/buttonFactory'),
     turretFactory              = require('./models/turretFactory'),
-    map                        = new QuadTree({
-      'width': 20000,
-      'height': 20000
+
+    MAP_WIDTH          = 20000,
+    MAP_HEIGHT         = 20000,
+
+    STARTING_MONEY     = 10000,
+    TURRET_COST        = 1000,
+    SHIP_COST          = 3000,
+    PLANET_HIT_COST    = 500,
+    ASTEROID_VALUE     = 300,
+
+    MIN_ASTEROID_RADIUS = 25,
+    MAX_ASTEROID_RADIUS = 100,
+
+    MIN_ASTEROID_SPEED  = 1,
+    MAX_ASTEROID_SPEED  = 15,
+
+    SHIP_RESPAWN_TIMER = 3000,
+
+    NUMBER_OF_STARTING_ASTEROIDS = 250,
+
+    map = new QuadTree({
+      'width' : MAP_WIDTH,
+      'height': MAP_HEIGHT
     });
 
 function init () {
-    
+  
   var viewport = require('./core/viewport');
 
   var myViewport = viewport({
     'quadTree': map
   });
-
-  var money = textFactory({
-    'information': '$10000',
-    'viewport': myViewport,
-    'color': '#94cd4b',
-    'static': true,
-    'x': 20,
-    'y': 30,
-    'font': '2em Georgia',
-    'value': 10000
+    
+  // Outline quadtree
+  myViewport.addObjectToAlwaysRender(boxFactory({
+    'x'     : map.x,
+    'y'     : map.y,
+    'width' : map.width,
+    'height': map.height
+  }));
+  
+  // The planet
+  var planet = planetFactory({
+    'health': 50000,
+    'impact': function (object) {
+      this.health -= object.mass;
+      money.value -= PLANET_HIT_COST;
+    }
   });
 
-  var asteroidCountText = textFactory({
-    'information': function () {
-      var allItems = map.getOrphansAndChildren(),
-          count    = 0;
-      for (var i = 0; i < allItems.length; i++) {
-        if (allItems[i].isAsteroid) {
-          count++;
-        }
-      }
+  // Player ship
+  var myShip = shipFactory({
+    'angle':{
+      'x':0.5,
+      'y':0
+    },
+    'quadTree': map,
+    'viewport': myViewport
+  });
 
-      return count + ' asteroids';
+  // The money
+  var money = textFactory({
+    'information': function () {
+      return '$' + this.value;
+    },
+    'viewport'   : myViewport,
+    'color'      : '#94cd4b',
+    'static'     : true,
+    'x'          : 20,
+    'y'          : 30,
+    'font'       : '2em Georgia',
+    'value'      : STARTING_MONEY
+  });
+
+  // Asteroid count text
+  textFactory({
+    'information': function () {
+      return 'Asteroids: ' + getAsteroidCount();
     },
     'viewport': myViewport,
-    'color': '#e893ff',
-    'static': true,
-    'x': myViewport.width * myViewport.scale - 700,
-    'y': 30,
-    'font': '2em Georgia'
+    'color'   : '#e893ff',
+    'static'  : true,
+    'x'       : myViewport.width * myViewport.scale - 700,
+    'y'       : 30,
+    'font'    : '2em Georgia'
   });
 
-  var turretButton = buttonFactory({
-
-    'x': 35,
-    'y': 50,
+  // Turret button
+  buttonFactory({
     'img': (function () {
       var img = new Image();
       img.src = 'turretButton.png';
       return img;
     }()),
+    'x'       : 35,
+    'y'       : 50,
     'viewport': myViewport,
+    'static'  : true,
+    'onClick' : function () {
 
-    'static': true,
-    
-    'onClick': function () {
       var turretButton = this;
-      if (money.value >= 1000) {
+      
+      if (money.value >= TURRET_COST) {
 
-        money.value = money.value - 1000;
-        money.information = '$' + money.value;
+        money.value = money.value - TURRET_COST;
 
         turretButton.isBusy = true;
 
         var newTurret = turretFactory({
-          'static': true,
-          'viewport': myViewport,
-          'quadTree': map,
+          'static'     : true,
+          'viewport'   : myViewport,
+          'quadTree'   : map,
           'onPlacement': function () {
             turretButton.isBusy = false;
           }
@@ -963,11 +1004,9 @@ function init () {
  
     setTimeout(function () {
       
-      if (money.value >= 3000) {
+      if (money.value >= SHIP_COST) {
 
-        money.value = money.value - 3000;
-        
-        money.information = '$' + money.value;    
+        money.value = money.value - SHIP_COST;
         
         var myShip = shipFactory({
           'angle':{
@@ -983,29 +1022,11 @@ function init () {
         myViewport.follow(myShip);
 
       }
-    }, 3000);
+    }, SHIP_RESPAWN_TIMER);
 
   }
-  var planet = planetFactory({
-    'health': 50000,
-    'impact': function (object) {
-      this.health -= object.mass;
-      money.value -= 500;
-      money.information = '$' + money.value; 
-      console.log('Planet hit...')
-    }
-  });
 
   map.insert(planet);
-  
-  var myShip = shipFactory({
-    'angle':{
-      'x':0.5,
-      'y':0
-    },
-    'quadTree': map,
-    'viewport': myViewport
-  });
 
   map.insert(myShip);
 
@@ -1013,251 +1034,206 @@ function init () {
 
   myViewport.follow(myShip);
 
-
-  if (!Math.getRandomInt) {
-    Math.getRandomInt = function (min, max) {
-      return Math.floor(Math.random() * (max - min + 1)) + min;
-    };
-  }
-
-  function isIntersectingCircles (c1, c2) {
-  
-    var dx       = c1.x - c2.x,
-        dy       = c1.y - c2.y,
-        distance = Math.sqrt(dx * dx + dy * dy);
-
-    return distance < c1.radius + c2.radius;
-  }
-
-  for (var i = 0; i < 200; i += 1) {
+  for (var i = 0; i < NUMBER_OF_STARTING_ASTEROIDS; i++) {
 
     var negX   = Math.random() < 0.5,
         negY   = Math.random() < 0.5,
-        angleX = Math.random(),
-        angleY = Math.random(),
-        radius = Math.getRandomInt(25,75),
+        angleX = Math.random() * (negX ? -1 : 1),
+        angleY = Math.random() * (negY ? -1 : 1),
+        radius = Math.getRandomInt(MIN_ASTEROID_RADIUS, MAX_ASTEROID_RADIUS),
         randX  = Math.getRandomInt(map.x - map.halfWidth,  map.x  + map.halfWidth),
-        randY  = Math.getRandomInt(map.y - map.halfHeight, map.y + map.halfHeight);
+        randY  = Math.getRandomInt(map.y - map.halfHeight, map.y  + map.halfHeight);
 
+    // Prevent asteroids from spawning near the planet.
     while (isIntersectingCircles({'x':randX, 'y':randY, 'radius': radius}, {'x':planet.x, 'y':planet.y, 'radius': planet.radius * 4})) {
       console.log('trying to place asteroid in good location.');
-      randX  = Math.getRandomInt(map.x - map.halfWidth,  map.x  + map.halfWidth);
-      randY  = Math.getRandomInt(map.y - map.halfHeight, map.y + map.halfHeight);
+      randX = Math.getRandomInt(map.x - map.halfWidth,  map.x  + map.halfWidth);
+      randY = Math.getRandomInt(map.y - map.halfHeight, map.y  + map.halfHeight);
     }
 
     map.insert(asteroidFactory({
-
-    'radius': radius,
-
-    'quadTree' : map,
-
-    'speed': Math.getRandomInt(1, 10),
-
-    'x': randX,
-    'y': randY,
-
-    'angle': {
-      'x': negX ? - angleX : angleX,
-      'y': negY ? - angleY : angleY
-    },
-
-    'value': 300,
-
-    'onImpact': addMoneyWhenAsteroidIsDestroyed,
-
-    'color': '#'+Math.floor(Math.random()*16777215).toString(16)
-    
+      'radius'   : radius,
+      'quadTree' : map,
+      'speed'    : Math.getRandomInt(MIN_ASTEROID_SPEED, MAX_ASTEROID_SPEED),
+      'x'        : randX,
+      'y'        : randY,
+      'value'    : ASTEROID_VALUE,
+      'onImpact' : addMoneyWhenAsteroidIsDestroyed,
+      'color'    : '#' + Math.floor(Math.random()*16777215).toString(16),
+      'angle'    : {
+        'x': angleX,
+        'y': angleY
+      }
     }));
 
   }
 
   function addMoneyWhenAsteroidIsDestroyed () {
     money.value = money.value + this.value;
-    money.information = '$' + money.value;
   }
-
-  myViewport.addObjectToAlwaysRender(boxFactory({
-    'x': map.x,
-    'y': map.y,
-    'width': map.width,
-    'height': map.height
-  }));
-
 
   clock.start();
 
-  window.map = map;
   window.clock = clock;
-  window.myViewport = myViewport;
-  window.explosionFactory = explosionFactory;
 
   events.on('playerDead', createNewPlayerShip);
 
 }
 
 window.addEventListener('DOMContentLoaded', init);
-},{"./core/clock":1,"./core/events.js":2,"./core/quadTree.js":7,"./core/viewport":8,"./models/asteroidFactory":10,"./models/boxFactory":11,"./models/buttonFactory":13,"./models/explosionFactory":14,"./models/planetFactory":15,"./models/shipFactory":16,"./models/textFactory":17,"./models/turretFactory":18}],10:[function(require,module,exports){
+
+function getAsteroidCount () {
+
+  var allItems = map.getOrphansAndChildren(),
+      count    = 0,
+      i        = 0,
+      l        = allItems.length;
+  
+  for (; i < l; i++) {
+    if (allItems[i].isAsteroid) {
+      count++;
+    }
+  }
+
+  return count;
+}
+
+function isIntersectingCircles (c1, c2) {
+
+  var dx       = c1.x - c2.x,
+      dy       = c1.y - c2.y,
+      distance = Math.sqrt(dx * dx + dy * dy);
+
+  return distance < c1.radius + c2.radius;
+}
+
+if (!Math.getRandomInt) {
+  Math.getRandomInt = function (min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  };
+}
+},{"./core/clock":1,"./core/events.js":2,"./core/quadTree.js":7,"./core/viewport":8,"./models/asteroidFactory":10,"./models/boxFactory":11,"./models/buttonFactory":13,"./models/planetFactory":15,"./models/shipFactory":16,"./models/textFactory":17,"./models/turretFactory":18}],10:[function(require,module,exports){
 'use strict';
 
-var _ = require('underscore');
+var _              = require('underscore'),
+    createVector   = require('../util/math/vector'),
+    clock          = require('../core/clock'),
+    BREAK_RADIUS   = 0.5,
+    MASS_FACTOR    = 4,
+    VALUE_FACTOR   = 0.5,
+    SPEED_INCREASE = 1.2;
 
-module.exports = (function () {
-
-  var createVector = require('../util/math/vector'),
-      clock        = require('../core/clock');
-
-  var asteroidPrototype = {
-
-    'x': 0,
-    'y': 0,
-
-    'radius': 25,
-    'mass'  : 100,
-
-    'color': 'green',
-
-    'border': 'blue',
-
-    'lineWidth': 2,
-    'z-index': 50,
-
-    'angle'   : {},
+var asteroidPrototype = {
+  'x'               : 0,
+  'y'               : 0,
+  'radius'          : 25,
+  'mass'            : 100,
+  'color'           : 'green',
+  'border'          : 'blue',
+  'lineWidth'       : 2,
+  'z-index'         : 50,
+  'angle'           : {},
+  'force'           : 1,
+  'maxSpeed'        : 3,
+  'value'           : 300,
+  'breaks'          : 2,
+  'isAsteroid'      : true,
+  'removeNextUpdate': false,
+  'sim'             : clock.UPDATE_BUFFER / 1000,
+ 
+  'impact': function () {
     
-    'force': 1,
-
-    'maxSpeed': 3,
-
-    'value': 300,
-
-    'breaks': 2,
-
-    'isAsteroid': true,
-
-    'removeNextUpdate': false,
+    var newAsteroid = {
+      'x'       : this.x,
+      'y'       : this.y,
+      'radius'  : this.radius * BREAK_RADIUS,
+      'mass'    : this.radius * BREAK_RADIUS * MASS_FACTOR,
+      'speed'   : this.speed  * SPEED_INCREASE,
+      'onImpact': this.onImpact,
+      'value'   : this.value * VALUE_FACTOR,
+      'color'   : this.color,
+      'breaks'  : this.breaks - 1,
+      'quadTree': this.quadTree
+    };
     
+    this.removeNextUpdate = true;
 
-    'sim'  : clock.UPDATE_BUFFER,
-
-
-
-    'impact': function () {
-      
-      var quadTree = this.quadTree;
-      
-      this.removeNextUpdate = true;
-
-      if (this.onImpact) {
-        this.onImpact();
-      }
-      
-      if (this.breaks === 0) {
-      } else {
-      
-        var color = this.color;
-        quadTree.insert(create({
-          'x': this.x,
-          'y': this.y,
-          'radius': this.radius * 0.7,
-          'mass': this.mass * 0.7,
-          'speed': this.speed * 1.1,
-          'angle': {
-            'x': Math.getRandomInt(-180, 180),
-            'y': Math.getRandomInt(-180, 180)
-          },
-          'onImpact': this.onImpact,
-          'value': this.value / 2,
-          'spin': (Math.random() < 0.5 ? -1 : 1) * Math.getRandomInt(0, 25) / 1000,
-          'color': color,
-          'breaks': this.breaks - 1,
-          'quadTree': quadTree
-        }));
-        quadTree.insert(create({
-          'x': this.x,
-          'y': this.y,
-          'radius': this.radius * 0.7,
-          'mass': this.mass * 0.7,
-          'speed': this.speed * 1.1,
-          'angle': {
-            'x': Math.getRandomInt(-180, 180),
-            'y': Math.getRandomInt(-180, 180)
-          },
-          'onImpact': this.onImpact,
-          'value': this.value / 2,
-          'spin': (Math.random() < 0.5 ? -1 : 1) * Math.getRandomInt(0, 25) / 1000,
-          'color': color,
-          'breaks': this.breaks - 1,
-          'quadTree': quadTree
-        }));
-
-      }
-
-    },
-
-    'updatePosition': function () {
-
-      this.add(this.velocity);
-      this.move(this.x, this.y);
-    },
-
-
-
-    'updateVelocity': function () {
-      this.velocity.add(this.angle.normalize().mult(this.force / this.mass));
-
-      this.velocity.mult(this.maxSpeed / this.velocity.length());
-    },
-
-    'limitVelocity': function () {
-      if (this.velocity.length() > this.maxSpeed) {
-      }
-    },
-    'update': function () {
-
-      if (this.removeNextUpdate) {
-        this.off('update');
-        this.remove();
-        this.removed = true;
-        return;
-      }
-      
-      this.updatePosition();
+    if (this.onImpact) {
+      this.onImpact();
+    }
     
-    },
+    if (this.breaks > 0) {
 
-    'render': function (ctx, viewport) {
-      ctx.fillStyle = this.color;
-      ctx.beginPath();
-      ctx.arc(0, 0, this.radius * viewport.scale, 0, 2 * Math.PI, false);
-      ctx.fill();
-      ctx.closePath();
+      this.quadTree.insert(createAsteroid(_.extend(newAsteroid, {
+        'spin'    : (Math.random() < 0.5 ? -1 : 1) * Math.getRandomInt(0, 25) / 1000,
+        'angle': {
+          'x': Math.getRandomInt(-180, 180),
+          'y': Math.getRandomInt(-180, 180)
+        }
+      })));
+
+      this.quadTree.insert(createAsteroid(_.extend(newAsteroid, {
+        'spin'    : (Math.random() < 0.5 ? -1 : 1) * Math.getRandomInt(0, 25) / 1000,
+        'angle': {
+          'x': Math.getRandomInt(-180, 180),
+          'y': Math.getRandomInt(-180, 180)
+        }
+      })));
+
     }
 
-  };
+  },
 
-  function init(newAsteroid) {
-    _.extend(newAsteroid, createVector(newAsteroid.x, newAsteroid.y));
+  'updatePosition': function () {
+    this.add(this.velocity);
+    this.move(this.x, this.y);
+  },
 
-    newAsteroid.width = newAsteroid.radius * 2;
-    newAsteroid.height = newAsteroid.radius * 2;
-    newAsteroid.angle = createVector(newAsteroid.angle.x, newAsteroid.angle.y);
+  'update': function () {
+
+    if (this.removeNextUpdate) {
+      this.off('update');
+      this.remove();
+      return;
+    }
     
-    newAsteroid.velocity = createVector(Math.random() * (Math.random() < 0.5 ? 1 : -1), Math.random() * (Math.random() < 0.5 ? 1 : -1));
+    this.updatePosition();
+  
+  },
 
-    newAsteroid.mass = newAsteroid.radius * 4;
-
-    newAsteroid.on('update', newAsteroid.update);
-
-    return newAsteroid;
-
+  'render': function (ctx, viewport) {
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius * viewport.scale, 0, 2 * Math.PI, false);
+    ctx.fill();
+    ctx.closePath();
   }
 
-  function create (config) {
-    return init(_.extend(Object.create(asteroidPrototype), config));
-  }
+};
 
-  return create;
+function init(newAsteroid) {
 
-}());
+  _.extend(newAsteroid, createVector(newAsteroid.x, newAsteroid.y));
+
+  newAsteroid.velocity = createVector(Math.random() * (Math.random() < 0.5 ? 1 : -1), Math.random() * (Math.random() < 0.5 ? 1 : -1));
+  newAsteroid.angle    = createVector(newAsteroid.angle.x, newAsteroid.angle.y);
+
+  newAsteroid.width = newAsteroid.radius  * 2;
+  newAsteroid.height = newAsteroid.radius * 2;
+
+  newAsteroid.mass = newAsteroid.radius * MASS_FACTOR;
+
+  newAsteroid.on('update', newAsteroid.update);
+
+  return newAsteroid;
+
+}
+
+function createAsteroid (config) {
+  return init(_.extend(Object.create(asteroidPrototype), config));
+}
+
+module.exports = createAsteroid;
 },{"../core/clock":1,"../util/math/vector":20,"underscore":22}],11:[function(require,module,exports){
 'use strict';
 
@@ -1434,106 +1410,116 @@ module.exports = (function () {
 },{"underscore":22}],14:[function(require,module,exports){
 'use strict';
 // https://gist.github.com/gre/1650294
-var _ = require('underscore');
+var _   = require('underscore'),
+    min = Math.min,
+    max = Math.max;
 
-module.exports = (function () {
+function timeFunction (t) { return (--t)*t*t+1; }
 
-  var explosionPrototype = {
-    'x': 0,
-    'y': 0,
-    'width': 600,
-    'height': 600,
-    'radius': 300,
-    'color': '233, 75, 2',
-    'totalDuration': 7000,
-    'border': 'blue',
-    'z-index': 9999,
-    'render': function (ctx, viewport, time) {
-      var duration = Math.min(Math.max((time - this.startTime) / this.totalDuration, 0), 1); 
-      var gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.radius * timeFunction(duration) * viewport.scale);
-      gradient.addColorStop(1, 'rgba('+this.color+', 0)');
-      gradient.addColorStop(0, 'rgba('+this.color+', 1)');
-      ctx.fillStyle = gradient;
-      ctx.beginPath();
-      ctx.arc(0, 0, this.radius * timeFunction(duration) * viewport.scale, 0, 2 * Math.PI, false);
-      ctx.fill();
-      ctx.closePath();
-    }
-  };
+var explosionPrototype = {
+  'x'            : 0,
+  'y'            : 0,
+  'width'        : 600,
+  'height'       : 600,
+  'radius'       : 300,
+  'centerColor'  : 'rgba(233, 75, 2, 1)',
+  'outerColor'   : 'rgba(233, 75, 2, 0)',
+  'totalDuration': 7000,
+  'z-index'      : 9999,
+  'render': function (ctx, viewport, time) {
+    
+    var duration = min(max((time - this.startTime) / this.totalDuration, 0), 1), 
+        gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.radius * timeFunction(duration) * viewport.scale);
 
-  function init(newExplosion) {
-
-    newExplosion.startTime = Date.now();
-    return newExplosion;
-
-  }
+    gradient.addColorStop(0, this.centerColor);
+    gradient.addColorStop(1, this.outerColor);
+    
+    ctx.fillStyle = gradient;
+    
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius * timeFunction(duration) * viewport.scale, 0, 2 * Math.PI, false);
+    ctx.fill();
+    ctx.closePath();
   
-  function timeFunction (t) { return (--t)*t*t+1; }
+  }
+};
 
-  return function (config) {
-    return init(_.extend(Object.create(explosionPrototype), config));
-  };
+function init(newExplosion) {
+  newExplosion.startTime = Date.now();
+  return newExplosion;
+}
 
-}());
+
+function createExplosion (config) {
+  return init(_.extend(Object.create(explosionPrototype), config));
+}
+
+module.exports = createExplosion;
+
 },{"underscore":22}],15:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
 
-module.exports = (function () {
-  var img = new Image();
-  
-  img.src = './planet.png';
-  img.onload = function () {
-    console.log('img loaded');
-    img.width  *= 2;
-    img.height *= 2;
-  }
-  var planetPrototype = {
-    'x': 0,
-    'y': 0,
-    'radius': 835,
-    'color': 'green',
-    'z-index': 10,
-    'border': 'blue',
-    'isPlanet': true,
-    'update':function () {
+var img = new Image();
 
-      var collidesList = this.getCollisions();
+img.src = './planet.png';
 
-      for (var i = 0; i < collidesList.length; i += 1) {
-        if (collidesList[i].isAsteroid) {
-          collidesList[i].impact(this);
-          if (this.impact) {
-            this.impact(collidesList[i]);
-          }
+img.onload = function () {
+  console.log('img loaded');
+  img.width  *= 2;
+  img.height *= 2;
+}
+
+var planetPrototype = {
+  'x'       : 0,
+  'y'       : 0,
+  'radius'  : 835,
+  'color'   : 'green',
+  'z-index' : 10,
+  'border'  : 'blue',
+  'isPlanet': true,
+  'update'  : function () {
+
+    var collidesList = this.getCollisions(),
+        i            = 0,
+        l            = collidesList.length,
+        currentObject;
+
+    for (; i < l; i++) {
+      currentObject = collidesList[i];
+      if (currentObject.isAsteroid) {
+        currentObject.impact(this);
+        if (this.impact) {
+          this.impact(currentObject);
         }
       }
-
-    },                         
-    'render': function (ctx, viewport) {
-      ctx.drawImage(img, -this.width / 2 * viewport.scale, -this.height / 2 * viewport.scale, viewport.scale * img.width, viewport.scale * img.height);
-      // ctx.fillStyle = this.color;
-      // ctx.beginPath();
-      // ctx.arc(0, 0, this.radius * viewport.scale, 0, 2 * Math.PI, false);
-      // ctx.fill();
-      // ctx.closePath();
     }
-  };
 
-  function init(newPlanet) {
-    newPlanet.width = newPlanet.radius * 2;
-    newPlanet.height = newPlanet.radius * 2;
-    newPlanet.on('update', newPlanet.update);
-    return newPlanet;    
+  },                         
+  'render': function (ctx, viewport) {
+    ctx.drawImage(img, -this.width / 2 * viewport.scale, -this.height / 2 * viewport.scale, viewport.scale * img.width, viewport.scale * img.height);
+    // ctx.fillStyle = this.color;
+    // ctx.beginPath();
+    // ctx.arc(0, 0, this.radius * viewport.scale, 0, 2 * Math.PI, false);
+    // ctx.fill();
+    // ctx.closePath();
+  }
+};
 
-  } 
+function init(newPlanet) {
+  newPlanet.width  = newPlanet.radius * 2;
+  newPlanet.height = newPlanet.radius * 2;
+  newPlanet.on('update', newPlanet.update);
+  return newPlanet;    
 
-  return function (config) {                        
-    return init(_.extend(Object.create(planetPrototype), config));
-  };
+} 
 
-}());                   
+function createPlanet (config) {                        
+  return init(_.extend(Object.create(planetPrototype), config));
+}
+
+module.exports = createPlanet;
 },{"underscore":22}],16:[function(require,module,exports){
 'use strict';
 

@@ -1,6 +1,6 @@
 'use strict';
 
-var _ = window._ = require('underscore');
+var _ = require('underscore');
 
 var DEFAULT_MAX_CHILDREN = 4,
     DEFAULT_DEPTH        = 4,
