@@ -17,7 +17,7 @@
     "watch": "grunt"
   },
   "author": "Anthony Nardi <anthonygt@gmail.com>",
-  "license": "ISC",
+  "license": "MIT",
   "devDependencies": {
     "browserify": "^10.2.0",
     "grunt": "^0.4.5",
