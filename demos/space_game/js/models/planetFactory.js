@@ -40,11 +40,6 @@ var planetPrototype = {
   },                         
   'render': function (ctx, viewport) {
     ctx.drawImage(img, -this.width / 2 * viewport.scale, -this.height / 2 * viewport.scale, viewport.scale * img.width, viewport.scale * img.height);
-    // ctx.fillStyle = this.color;
-    // ctx.beginPath();
-    // ctx.arc(0, 0, this.radius * viewport.scale, 0, 2 * Math.PI, false);
-    // ctx.fill();
-    // ctx.closePath();
   }
 };
 

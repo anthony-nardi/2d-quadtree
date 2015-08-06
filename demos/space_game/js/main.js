@@ -162,9 +162,15 @@ function init () {
         sheildButton.isBusy = true;
 
         map.insert(sheildFactory({
-          'static'     : true,
-          'viewport'   : myViewport,
-          'quadTree'   : map
+          'static'       : true,
+          'viewport'     : myViewport,
+          'quadTree'     : map,
+          'maxHealth'    : 5000,
+          'currentHealth': 5000,
+          'impact': function (object) {
+            this.currentHealth -= object.mass;
+            console.log('Sheild health: ' + this.currentHealth)
+          },
         }));
         
       }
