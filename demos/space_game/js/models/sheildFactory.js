@@ -73,11 +73,11 @@ var sheildPrototype = {
       }
 
       gradient = ctx.createRadialGradient(
-        hitX * viewport.scale, 
-        hitY * viewport.scale,
+        (hitX - this.x) * viewport.scale, 
+        (hitY - this.y) * viewport.scale,
         0, 
-        hitX * viewport.scale, 
-        hitY * viewport.scale,
+        (hitX - this.x) * viewport.scale, 
+        (hitY - this.y) * viewport.scale,
         this.radius * viewport.scale
       );
 

@@ -126,7 +126,11 @@ module.exports = (function () {
             this.isValidPlacement = true;
             this.resetAngle(0, 1);
             this.updateAngle(Math.atan2(this.y - collidesList[i].y, this.x - collidesList[i].x));
+            this.x -= collidesList[i].x;
+            this.y -= collidesList[i].y;
             this.normalize().mult(collidesList[i].radius - 20 + this.height / 2);
+            this.x += collidesList[i].x;
+            this.y += collidesList[i].y;
             return;
           }
         }

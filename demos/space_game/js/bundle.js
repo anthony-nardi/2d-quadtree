@@ -897,7 +897,7 @@ var QuadTree                   = require('./core/quadTree.js'),
 
     SHIP_RESPAWN_TIMER = 3000,
 
-    NUMBER_OF_STARTING_ASTEROIDS = 250,
+    NUMBER_OF_STARTING_ASTEROIDS = 200,
 
     map = new QuadTree({
       'width' : MAP_WIDTH,
@@ -919,9 +919,40 @@ function init () {
     'width' : map.width,
     'height': map.height
   }));
+
+  myViewport.addObjectToAlwaysRender({
+    'x': 0,
+    'y': 0,
+    'render': function (ctx, viewport) {
+      drawQuadtreeBoundaries(map, ctx, viewport);
+    }
+  });
+
+  function drawQuadtreeBoundaries (quadTree, ctx, viewport) {
   
+    var l      = quadTree.children.length;
+    
+    ctx.strokeStyle = '#cf2';
+    ctx.lineWidth   = '4';
+
+    ctx.strokeRect(
+      (quadTree.x - quadTree.halfWidth)  * viewport.scale, 
+      (quadTree.y - quadTree.halfHeight) * viewport.scale, 
+      quadTree.width  * viewport.scale, 
+      quadTree.height * viewport.scale
+    );
+
+    if (!quadTree.isLeaf) {
+      for (var i = 0; i < l; i++) {
+        drawQuadtreeBoundaries(quadTree.children[i], ctx, viewport);
+      }
+    }
+  }
+
   // The planet
   var planet = planetFactory({
+    'x': 1200,
+    'y': 1200,
     'health': 50000,
     'impact': function (object) {
       this.health -= object.mass;
@@ -935,6 +966,8 @@ function init () {
       'x':0.5,
       'y':0
     },
+    'x': planet.x,
+    'y': planet.y,
     'quadTree': map,
     'viewport': myViewport
   });
@@ -1028,6 +1061,8 @@ function init () {
         sheildButton.isBusy = true;
 
         map.insert(sheildFactory({
+          'x'            : planet.x,
+          'y'            : planet.y,
           'static'       : true,
           'viewport'     : myViewport,
           'quadTree'     : map,
@@ -1035,10 +1070,8 @@ function init () {
           'currentHealth': 5000,
           'impact': function (object) {
             this.currentHealth -= object.mass;
-            console.log('Sheild health: ' + this.currentHealth)
           },
-        }));
-        
+        }));        
       }
     }
   });
@@ -1634,11 +1667,11 @@ var sheildPrototype = {
       }
 
       gradient = ctx.createRadialGradient(
-        hitX * viewport.scale, 
-        hitY * viewport.scale,
+        (hitX - this.x) * viewport.scale, 
+        (hitY - this.y) * viewport.scale,
         0, 
-        hitX * viewport.scale, 
-        hitY * viewport.scale,
+        (hitX - this.x) * viewport.scale, 
+        (hitY - this.y) * viewport.scale,
         this.radius * viewport.scale
       );
 
@@ -2116,7 +2149,11 @@ module.exports = (function () {
             this.isValidPlacement = true;
             this.resetAngle(0, 1);
             this.updateAngle(Math.atan2(this.y - collidesList[i].y, this.x - collidesList[i].x));
+            this.x -= collidesList[i].x;
+            this.y -= collidesList[i].y;
             this.normalize().mult(collidesList[i].radius - 20 + this.height / 2);
+            this.x += collidesList[i].x;
+            this.y += collidesList[i].y;
             return;
           }
         }
