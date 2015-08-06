@@ -5,18 +5,6 @@ var Quadtree = window.Quadtree = require('../../js/quadtree.js');
 
 var map = window.map = new Quadtree();
 
-// var object1 = window.object1 = {'x': 10,  'y': 10,  'height': 10, 'width': 10};
-// var object2 = window.object2 = {'x': 200, 'y': 200, 'height': 20, 'width': 20};
-// var object3 = window.object3 = {'x': 55,  'y': 150, 'height': 30, 'width': 30};
-// var object4 = window.object4 = {'x': 800, 'y': 700, 'height': 40, 'width': 40};
-// var object5 = window.object5 = {'x': 660, 'y': 220, 'height': 50, 'width': 50};
-
-// map.insert(object1);
-// map.insert(object2);
-// map.insert(object3);
-// map.insert(object4);
-// map.insert(object5);
-
 var lastMouseX,
     lastMouseY,
     lastRect;

@@ -11,6 +11,7 @@ var QuadTree                   = require('./core/quadTree.js'),
     textFactory                = require('./models/textFactory'),
     buttonFactory              = require('./models/buttonFactory'),
     turretFactory              = require('./models/turretFactory'),
+    sheildFactory              = require('./models/sheildFactory'),
 
     MAP_WIDTH          = 20000,
     MAP_HEIGHT         = 20000,
@@ -18,6 +19,7 @@ var QuadTree                   = require('./core/quadTree.js'),
     STARTING_MONEY     = 10000,
     TURRET_COST        = 1000,
     SHIP_COST          = 3000,
+    SHEILD_COST        = 5000,
     PLANET_HIT_COST    = 500,
     ASTEROID_VALUE     = 300,
 
@@ -129,6 +131,41 @@ function init () {
         });
 
         map.insert(newTurret);
+        
+      }
+    }
+  });
+
+  // Planetary sheild button
+  buttonFactory({
+    'img': (function () {
+      var img = new Image();
+      img.src = 'sheildButton.png';
+      return img;
+    }()),
+    'x': 35,
+    'y': 125,
+    'viewport': myViewport,
+    'static': true,
+    'onClick' : function () {
+      
+      var sheildButton = this;
+      
+      if (sheildButton.isBusy) {
+        return;
+      }
+
+      if (money.value >= SHEILD_COST) {
+
+        money.value = money.value - SHEILD_COST;
+
+        sheildButton.isBusy = true;
+
+        map.insert(sheildFactory({
+          'static'     : true,
+          'viewport'   : myViewport,
+          'quadTree'   : map
+        }));
         
       }
     }

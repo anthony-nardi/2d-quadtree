@@ -6,18 +6,6 @@ var Quadtree = window.Quadtree = require('../../js/quadtree.js');
 
 var map = window.map = new Quadtree();
 
-// var object1 = window.object1 = {'x': 10,  'y': 10,  'height': 10, 'width': 10};
-// var object2 = window.object2 = {'x': 200, 'y': 200, 'height': 20, 'width': 20};
-// var object3 = window.object3 = {'x': 55,  'y': 150, 'height': 30, 'width': 30};
-// var object4 = window.object4 = {'x': 800, 'y': 700, 'height': 40, 'width': 40};
-// var object5 = window.object5 = {'x': 660, 'y': 220, 'height': 50, 'width': 50};
-
-// map.insert(object1);
-// map.insert(object2);
-// map.insert(object3);
-// map.insert(object4);
-// map.insert(object5);
-
 var lastMouseX,
     lastMouseY,
     lastRect;
@@ -428,11 +416,15 @@ var DEFAULT_MAX_CHILDREN = 4,
     SOUTH_EAST           = 8;           
 
 /**
- * [rectPrototype purpose is to extend the rectangles that are inserted into the quadtree with methods]
- * @type {Object}
+ * Rectangles inserted into the quadtree are extended with this object literal
  */
 var rectPrototype = {
-
+  /**
+   * Moves the rectangle in the quadtree to a new position (x, y)
+   * @method
+   * @param  {Number} x The x coordinate as defined by the quadtree coordinate system
+   * @param  {Number} y The y coordinate as defined by the quadtree coordinate system
+   */
   'move': function (x, y) {
   
     this.x = x;
@@ -445,10 +437,19 @@ var rectPrototype = {
 
   },
 
+  /**
+   * Returns an array of the rectangles within the quadtree that intersect with this rectangle
+   * @method
+   * @return {Array} The rectangles that intersect with this rectangle
+   */
   'getCollisions': function () {
     return this.parent.getCollisions(this);
   },
 
+  /**
+   * Comepletely removes this rectangle from the quadtree
+   * @method
+   */
   'remove': function () {
     this.parent.remove(this);
   }
@@ -456,9 +457,10 @@ var rectPrototype = {
 };
 
 /**
- * [Quadtree is the Quadtree contstructor function.  Whenever the quadtree splits,
- * this constructor is used to initialize the new nodes of the quadtree.]
- * @param {Object} options [The only options of concern to you: width, height, maxChildren, depth]
+ * Quadtree contstructor function. Use to initialize the Quadtree. Also, whenever the quadtree splits,
+ * this constructor is used to initialize the new nodes of the quadtree.
+ * @constructor
+ * @param {Object} options The only options of concern to you: width, height, maxChildren, depth
  */
 function Quadtree (options) {
   
@@ -481,9 +483,8 @@ function Quadtree (options) {
 
 /**
  * 
- * [insert Inserts an object into the quadTree]
- * @param  {Object} object [An arbitrary object with rectangle properties]
- * @return {[type]}        [description]
+ * Inserts an object into the quadTree
+ * @param  {Object} An arbitrary object with rectangle properties (x, y, width, height)
  */
 Quadtree.prototype.insert = function (object) {
 
@@ -503,7 +504,6 @@ Quadtree.prototype.insert = function (object) {
       return;
     } else {
       forceObjectWithinBounds(object, this);
-      // console.log('Object is outside the bounds this Quadtree');      
     }
   }
 
@@ -517,7 +517,6 @@ Quadtree.prototype.insert = function (object) {
     setQuadrant(object, this);
 
     if (this.children.length > this.maxChildren && this.depth) {
-      // console.log('Quadtree must divide because the number of children exceeds ' + this.maxChildren);
       this.divide();
       return;
     }
@@ -531,14 +530,11 @@ Quadtree.prototype.insert = function (object) {
     for (var i = 0; i < numberOfChildren; i++) {
       if (isWithinBounds(this.children[i], object)) {
         this.children[i].insert(object);
-        // console.log('Object fits completely within a child Quadtree.');
         return;
       }
     }
 
     // Object does not fit within any of the sub-quadTrees.  It's an orphan.
-
-    // console.log('Object is an orphan of %o', this);
 
     setQuadrant(object, this);
     this.orphans.push(object);
@@ -548,9 +544,9 @@ Quadtree.prototype.insert = function (object) {
 };
 
 /**
- * [remove removes the object  and collapses the quadTree]
- * @param  {Object} object [Item that was inserted into the quadTree]
- * @return {[type]}        [description]
+ * Removes the object and potentially collapses the quadTree
+ * @method remove
+ * @param  {Object} Item that was inserted into the quadTree
  */
 Quadtree.prototype.remove = function (object) {
 
@@ -574,10 +570,8 @@ Quadtree.prototype.remove = function (object) {
 };
 
 /**
- * [divide partitions the quadTree into 4 equal sized quadTrees.
- *  It also re-inserts all of the children that the leaf contained.
- * ]
- * @return {[type]} [description]
+ * Partitions the quadTree into 4 equal sized quadTrees.
+ * It also re-inserts all of the children that the leaf contained.
  */
 Quadtree.prototype.divide = function () {
 
@@ -624,14 +618,13 @@ Quadtree.prototype.divide = function () {
 };
 
 /**
- * [collapse Collapses the quadTree]
- * @return {[type]} [description]
+ * Collapses the quadTree
  */
 Quadtree.prototype.collapse = function () {
 
   if (this.parent) {
     if (this !== this.parent.children[0] && this !== this.parent.children[1] && this !== this.parent.children[2] && this !== this.parent.children[3]) {
-      debugger;
+      throw 'This was a bug that was fixed, but I am paranoid this will get hit so I left it...';
     }
   }
   
@@ -657,16 +650,15 @@ Quadtree.prototype.collapse = function () {
 };
 
 /**
- * [canCollapse helper that determines if the quadtree should collapse]
- * @return {[type]} [description]
+ * Helper method that determines if the quadtree should collapse
  */
 Quadtree.prototype.canCollapse = function () {
   return this.getOrphanAndChildCount() <= this.maxChildren;
 }
 
 /**
- * [getOrphanCount returns the number of orphans in the quadTree]
- * @return {Array} [number of orphans in the quadTree]
+ * getOrphanCount returns the number of orphans in the quadTree
+ * @return {Array} number of orphans in the quadTree
  */
 Quadtree.prototype.getOrphanCount = function () {
   
@@ -690,8 +682,8 @@ Quadtree.prototype.getOrphanCount = function () {
 };
 
 /**
- * [getChildCount returns the number of children in the quadTree]
- * @return {Integer} [number of children in the quadTree]
+ * Returns the number of children in the quadTree
+ * @return {Number} The number of children in the quadTree
  */
 Quadtree.prototype.getChildCount = function () {
 
@@ -711,16 +703,16 @@ Quadtree.prototype.getChildCount = function () {
 };
 
 /**
- * [getOrphanAndChildCount returns all rectangles that have been inserted into the quadtree]
- * @return {[type]} [description]
+ * getOrphanAndChildCount returns all rectangles that have been inserted into the quadtree
+ * @return {Number} The number of all inserted objects in the quadtree
  */
 Quadtree.prototype.getOrphanAndChildCount = function () {
   return this.getOrphanCount() + this.getChildCount();
 };
 
 /**
- * [getOrphans return all the orphans of the quadTree]
- * @return {Array} [all the orphans of the quadTree]
+ * getOrphans return all the orphans of the quadTree
+ * @return {Array} all the orphans of the quadTree
  */
 Quadtree.prototype.getOrphans = function () {
 
@@ -741,8 +733,8 @@ Quadtree.prototype.getOrphans = function () {
 };
 
 /**
- * [getChildren returns an array of all the children of the quadTree]
- * @return {Array} [all the children of the quadTree]
+ * getChildren returns an array of all the children of the quadTree
+ * @return {Array} all the children of the quadTree
  */
 Quadtree.prototype.getChildren = function () {
   
@@ -760,16 +752,16 @@ Quadtree.prototype.getChildren = function () {
 };
 
 /**
- * [getOrphansAndChildren returns an array of all the children and orphans of the quadTree]
- * @return {Array} [all the children and orphans of the quadTree]
+ * getOrphansAndChildren returns an array of all the children and orphans of the quadTree
+ * @return {Array} all the children and orphans of the quadTree
  */
 Quadtree.prototype.getOrphansAndChildren = function () {
   return this.getChildren().concat(this.getOrphans());
 };
 
 /**
- * [getQuadtreeCount returns the number of divisions within the quadtree.]
- * @return {Integer} [The number of divisions within the quadtree.]
+ * getQuadtreeCount returns the number of divisions within the quadtree.
+ * @return {Number} The number of divisions within the quadtree.
  */
 Quadtree.prototype.getQuadtreeCount = function () {
   
@@ -910,9 +902,9 @@ Quadtree.prototype.getBruteForceCollisions = function (rect) {
 // Helper functions
 
 /**
- * [setQuadrant sets the overlapping quadrants (quadtrees) given an object]
- * @param {Object} object   [A rectangle that is inserted in the quadtree]
- * @param {Object} quadtree [A quadtree]
+ * setQuadrant sets the overlapping quadrants (quadtrees) given an object
+ * @param {Object} object   A rectangle that is inserted in the quadtree
+ * @param {Object} quadtree A quadtree
  */
 function setQuadrant (object, quadtree) {
 

@@ -538,7 +538,7 @@ module.exports = [,,,
 'use strict';
 
 module.exports = require('../../../../js/quadtree.js');
-},{"../../../../js/quadtree.js":21}],8:[function(require,module,exports){
+},{"../../../../js/quadtree.js":22}],8:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -863,7 +863,7 @@ module.exports = (function () {
   };
 
 }());
-},{"../util/math/bounds":19,"../util/math/vector":20,"./clock":1,"./fullScreenDisplay":4,"./quadTree":7,"underscore":22}],9:[function(require,module,exports){
+},{"../util/math/bounds":20,"../util/math/vector":21,"./clock":1,"./fullScreenDisplay":4,"./quadTree":7,"underscore":23}],9:[function(require,module,exports){
 'use strict';
 
 
@@ -877,6 +877,7 @@ var QuadTree                   = require('./core/quadTree.js'),
     textFactory                = require('./models/textFactory'),
     buttonFactory              = require('./models/buttonFactory'),
     turretFactory              = require('./models/turretFactory'),
+    sheildFactory              = require('./models/sheildFactory'),
 
     MAP_WIDTH          = 20000,
     MAP_HEIGHT         = 20000,
@@ -884,6 +885,7 @@ var QuadTree                   = require('./core/quadTree.js'),
     STARTING_MONEY     = 10000,
     TURRET_COST        = 1000,
     SHIP_COST          = 3000,
+    SHEILD_COST        = 5000,
     PLANET_HIT_COST    = 500,
     ASTEROID_VALUE     = 300,
 
@@ -995,6 +997,41 @@ function init () {
         });
 
         map.insert(newTurret);
+        
+      }
+    }
+  });
+
+  // Planetary sheild button
+  buttonFactory({
+    'img': (function () {
+      var img = new Image();
+      img.src = 'sheildButton.png';
+      return img;
+    }()),
+    'x': 35,
+    'y': 125,
+    'viewport': myViewport,
+    'static': true,
+    'onClick' : function () {
+      
+      var sheildButton = this;
+      
+      if (sheildButton.isBusy) {
+        return;
+      }
+
+      if (money.value >= SHEILD_COST) {
+
+        money.value = money.value - SHEILD_COST;
+
+        sheildButton.isBusy = true;
+
+        map.insert(sheildFactory({
+          'static'     : true,
+          'viewport'   : myViewport,
+          'quadTree'   : map
+        }));
         
       }
     }
@@ -1112,7 +1149,7 @@ if (!Math.getRandomInt) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   };
 }
-},{"./core/clock":1,"./core/events.js":2,"./core/quadTree.js":7,"./core/viewport":8,"./models/asteroidFactory":10,"./models/boxFactory":11,"./models/buttonFactory":13,"./models/planetFactory":15,"./models/shipFactory":16,"./models/textFactory":17,"./models/turretFactory":18}],10:[function(require,module,exports){
+},{"./core/clock":1,"./core/events.js":2,"./core/quadTree.js":7,"./core/viewport":8,"./models/asteroidFactory":10,"./models/boxFactory":11,"./models/buttonFactory":13,"./models/planetFactory":15,"./models/sheildFactory":16,"./models/shipFactory":17,"./models/textFactory":18,"./models/turretFactory":19}],10:[function(require,module,exports){
 'use strict';
 
 var _              = require('underscore'),
@@ -1234,7 +1271,7 @@ function createAsteroid (config) {
 }
 
 module.exports = createAsteroid;
-},{"../core/clock":1,"../util/math/vector":20,"underscore":22}],11:[function(require,module,exports){
+},{"../core/clock":1,"../util/math/vector":21,"underscore":23}],11:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -1265,7 +1302,7 @@ module.exports = (function () {
   };
 
 }());                   
-},{"underscore":22}],12:[function(require,module,exports){
+},{"underscore":23}],12:[function(require,module,exports){
 'use strict';
 var _ = require('underscore');
 module.exports = (function () {
@@ -1331,7 +1368,7 @@ module.exports = (function () {
   };
 
 }());
-},{"../core/clock":1,"../util/math/vector":20,"underscore":22}],13:[function(require,module,exports){
+},{"../core/clock":1,"../util/math/vector":21,"underscore":23}],13:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -1407,7 +1444,7 @@ module.exports = (function () {
   };
 
 }());
-},{"underscore":22}],14:[function(require,module,exports){
+},{"underscore":23}],14:[function(require,module,exports){
 'use strict';
 // https://gist.github.com/gre/1650294
 var _   = require('underscore'),
@@ -1456,7 +1493,7 @@ function createExplosion (config) {
 
 module.exports = createExplosion;
 
-},{"underscore":22}],15:[function(require,module,exports){
+},{"underscore":23}],15:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -1520,7 +1557,73 @@ function createPlanet (config) {
 }
 
 module.exports = createPlanet;
-},{"underscore":22}],16:[function(require,module,exports){
+},{"underscore":23}],16:[function(require,module,exports){
+'use strict';
+
+var _ = require('underscore'),
+  min = Math.min,
+  max = Math.max;
+function timeFunction (t) { return (--t)*t*t+1; }
+
+var sheildPrototype = {
+  'x'       : 0,
+  'y'       : 0,
+  'radius'  : 1000,
+  'centerColor'   : 'rgba(0, 255, 204, 0)',
+  'outerColor': 'rgba(0, 255, 204, 0.3)',
+  'z-index' : 10,
+  'totalDuration': 800,
+  'border'  : 'blue',
+  'update'  : function () {
+
+    var collidesList = this.getCollisions(),
+        i            = 0,
+        l            = collidesList.length,
+        currentObject;
+
+    for (; i < l; i++) {
+      currentObject = collidesList[i];
+      if (currentObject.isAsteroid) {
+        currentObject.impact(this);
+        if (this.impact) {
+          this.impact(currentObject);
+        }
+      }
+    }
+
+  },                         
+  'render': function (ctx, viewport, time) {
+    
+    var duration = min(max((time - this.startTime) / this.totalDuration, 0), 1),
+        gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.radius * timeFunction(duration) * viewport.scale);
+
+    gradient.addColorStop(0, this.centerColor);
+    gradient.addColorStop(1, this.outerColor);
+    
+    ctx.fillStyle = gradient;
+
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius * timeFunction(duration) * viewport.scale, 0, 2 * Math.PI, false);
+    ctx.fill();
+    ctx.closePath();
+  }
+};
+
+function init(newSheild) {
+  newSheild.startTime = Date.now();
+  newSheild.width     = newSheild.radius * 2;
+  newSheild.height    = newSheild.radius * 2;
+  newSheild.on('update', newSheild.update);
+  return newSheild;    
+
+} 
+
+function createSheild (config) {                        
+  return init(_.extend(Object.create(sheildPrototype), config));
+}
+
+module.exports = createSheild;
+},{"underscore":23}],17:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore'), 
@@ -1770,7 +1873,7 @@ module.exports = (function () {
   };
 
 }());
-},{"../core/clock":1,"../core/events.js":2,"../util/math/vector":20,"./bulletFactory":12,"./explosionFactory":14,"underscore":22}],17:[function(require,module,exports){
+},{"../core/clock":1,"../core/events.js":2,"../util/math/vector":21,"./bulletFactory":12,"./explosionFactory":14,"underscore":23}],18:[function(require,module,exports){
 'use strict';
 var _ = require('underscore');
 module.exports = (function () {
@@ -1836,7 +1939,7 @@ module.exports = (function () {
 	};
 
 }());
-},{"underscore":22}],18:[function(require,module,exports){
+},{"underscore":23}],19:[function(require,module,exports){
  'use strict';
 
 var _ = require('underscore');
@@ -2047,7 +2150,7 @@ module.exports = (function () {
   return create;
 
 }());
-},{"../core/clock":1,"../util/math/vector":20,"./bulletFactory":12,"underscore":22}],19:[function(require,module,exports){
+},{"../core/clock":1,"../util/math/vector":21,"./bulletFactory":12,"underscore":23}],20:[function(require,module,exports){
 'use strict';
 
 module.exports = function (obj) {
@@ -2063,7 +2166,7 @@ module.exports = function (obj) {
   };
 };
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -2148,7 +2251,7 @@ module.exports = (function () {
 
 }());
 
-},{"underscore":22}],21:[function(require,module,exports){
+},{"underscore":23}],22:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -2163,11 +2266,15 @@ var DEFAULT_MAX_CHILDREN = 4,
     SOUTH_EAST           = 8;           
 
 /**
- * [rectPrototype purpose is to extend the rectangles that are inserted into the quadtree with methods]
- * @type {Object}
+ * Rectangles inserted into the quadtree are extended with this object literal
  */
 var rectPrototype = {
-
+  /**
+   * Moves the rectangle in the quadtree to a new position (x, y)
+   * @method
+   * @param  {Number} x The x coordinate as defined by the quadtree coordinate system
+   * @param  {Number} y The y coordinate as defined by the quadtree coordinate system
+   */
   'move': function (x, y) {
   
     this.x = x;
@@ -2180,10 +2287,19 @@ var rectPrototype = {
 
   },
 
+  /**
+   * Returns an array of the rectangles within the quadtree that intersect with this rectangle
+   * @method
+   * @return {Array} The rectangles that intersect with this rectangle
+   */
   'getCollisions': function () {
     return this.parent.getCollisions(this);
   },
 
+  /**
+   * Comepletely removes this rectangle from the quadtree
+   * @method
+   */
   'remove': function () {
     this.parent.remove(this);
   }
@@ -2191,9 +2307,10 @@ var rectPrototype = {
 };
 
 /**
- * [Quadtree is the Quadtree contstructor function.  Whenever the quadtree splits,
- * this constructor is used to initialize the new nodes of the quadtree.]
- * @param {Object} options [The only options of concern to you: width, height, maxChildren, depth]
+ * Quadtree contstructor function. Use to initialize the Quadtree. Also, whenever the quadtree splits,
+ * this constructor is used to initialize the new nodes of the quadtree.
+ * @constructor
+ * @param {Object} options The only options of concern to you: width, height, maxChildren, depth
  */
 function Quadtree (options) {
   
@@ -2216,9 +2333,8 @@ function Quadtree (options) {
 
 /**
  * 
- * [insert Inserts an object into the quadTree]
- * @param  {Object} object [An arbitrary object with rectangle properties]
- * @return {[type]}        [description]
+ * Inserts an object into the quadTree
+ * @param  {Object} An arbitrary object with rectangle properties (x, y, width, height)
  */
 Quadtree.prototype.insert = function (object) {
 
@@ -2238,7 +2354,6 @@ Quadtree.prototype.insert = function (object) {
       return;
     } else {
       forceObjectWithinBounds(object, this);
-      // console.log('Object is outside the bounds this Quadtree');      
     }
   }
 
@@ -2252,7 +2367,6 @@ Quadtree.prototype.insert = function (object) {
     setQuadrant(object, this);
 
     if (this.children.length > this.maxChildren && this.depth) {
-      // console.log('Quadtree must divide because the number of children exceeds ' + this.maxChildren);
       this.divide();
       return;
     }
@@ -2266,14 +2380,11 @@ Quadtree.prototype.insert = function (object) {
     for (var i = 0; i < numberOfChildren; i++) {
       if (isWithinBounds(this.children[i], object)) {
         this.children[i].insert(object);
-        // console.log('Object fits completely within a child Quadtree.');
         return;
       }
     }
 
     // Object does not fit within any of the sub-quadTrees.  It's an orphan.
-
-    // console.log('Object is an orphan of %o', this);
 
     setQuadrant(object, this);
     this.orphans.push(object);
@@ -2283,9 +2394,9 @@ Quadtree.prototype.insert = function (object) {
 };
 
 /**
- * [remove removes the object  and collapses the quadTree]
- * @param  {Object} object [Item that was inserted into the quadTree]
- * @return {[type]}        [description]
+ * Removes the object and potentially collapses the quadTree
+ * @method remove
+ * @param  {Object} Item that was inserted into the quadTree
  */
 Quadtree.prototype.remove = function (object) {
 
@@ -2309,10 +2420,8 @@ Quadtree.prototype.remove = function (object) {
 };
 
 /**
- * [divide partitions the quadTree into 4 equal sized quadTrees.
- *  It also re-inserts all of the children that the leaf contained.
- * ]
- * @return {[type]} [description]
+ * Partitions the quadTree into 4 equal sized quadTrees.
+ * It also re-inserts all of the children that the leaf contained.
  */
 Quadtree.prototype.divide = function () {
 
@@ -2359,14 +2468,13 @@ Quadtree.prototype.divide = function () {
 };
 
 /**
- * [collapse Collapses the quadTree]
- * @return {[type]} [description]
+ * Collapses the quadTree
  */
 Quadtree.prototype.collapse = function () {
 
   if (this.parent) {
     if (this !== this.parent.children[0] && this !== this.parent.children[1] && this !== this.parent.children[2] && this !== this.parent.children[3]) {
-      debugger;
+      throw 'This was a bug that was fixed, but I am paranoid this will get hit so I left it...';
     }
   }
   
@@ -2392,16 +2500,15 @@ Quadtree.prototype.collapse = function () {
 };
 
 /**
- * [canCollapse helper that determines if the quadtree should collapse]
- * @return {[type]} [description]
+ * Helper method that determines if the quadtree should collapse
  */
 Quadtree.prototype.canCollapse = function () {
   return this.getOrphanAndChildCount() <= this.maxChildren;
 }
 
 /**
- * [getOrphanCount returns the number of orphans in the quadTree]
- * @return {Array} [number of orphans in the quadTree]
+ * getOrphanCount returns the number of orphans in the quadTree
+ * @return {Array} number of orphans in the quadTree
  */
 Quadtree.prototype.getOrphanCount = function () {
   
@@ -2425,8 +2532,8 @@ Quadtree.prototype.getOrphanCount = function () {
 };
 
 /**
- * [getChildCount returns the number of children in the quadTree]
- * @return {Integer} [number of children in the quadTree]
+ * Returns the number of children in the quadTree
+ * @return {Number} The number of children in the quadTree
  */
 Quadtree.prototype.getChildCount = function () {
 
@@ -2446,16 +2553,16 @@ Quadtree.prototype.getChildCount = function () {
 };
 
 /**
- * [getOrphanAndChildCount returns all rectangles that have been inserted into the quadtree]
- * @return {[type]} [description]
+ * getOrphanAndChildCount returns all rectangles that have been inserted into the quadtree
+ * @return {Number} The number of all inserted objects in the quadtree
  */
 Quadtree.prototype.getOrphanAndChildCount = function () {
   return this.getOrphanCount() + this.getChildCount();
 };
 
 /**
- * [getOrphans return all the orphans of the quadTree]
- * @return {Array} [all the orphans of the quadTree]
+ * getOrphans return all the orphans of the quadTree
+ * @return {Array} all the orphans of the quadTree
  */
 Quadtree.prototype.getOrphans = function () {
 
@@ -2476,8 +2583,8 @@ Quadtree.prototype.getOrphans = function () {
 };
 
 /**
- * [getChildren returns an array of all the children of the quadTree]
- * @return {Array} [all the children of the quadTree]
+ * getChildren returns an array of all the children of the quadTree
+ * @return {Array} all the children of the quadTree
  */
 Quadtree.prototype.getChildren = function () {
   
@@ -2495,16 +2602,16 @@ Quadtree.prototype.getChildren = function () {
 };
 
 /**
- * [getOrphansAndChildren returns an array of all the children and orphans of the quadTree]
- * @return {Array} [all the children and orphans of the quadTree]
+ * getOrphansAndChildren returns an array of all the children and orphans of the quadTree
+ * @return {Array} all the children and orphans of the quadTree
  */
 Quadtree.prototype.getOrphansAndChildren = function () {
   return this.getChildren().concat(this.getOrphans());
 };
 
 /**
- * [getQuadtreeCount returns the number of divisions within the quadtree.]
- * @return {Integer} [The number of divisions within the quadtree.]
+ * getQuadtreeCount returns the number of divisions within the quadtree.
+ * @return {Number} The number of divisions within the quadtree.
  */
 Quadtree.prototype.getQuadtreeCount = function () {
   
@@ -2645,9 +2752,9 @@ Quadtree.prototype.getBruteForceCollisions = function (rect) {
 // Helper functions
 
 /**
- * [setQuadrant sets the overlapping quadrants (quadtrees) given an object]
- * @param {Object} object   [A rectangle that is inserted in the quadtree]
- * @param {Object} quadtree [A quadtree]
+ * setQuadrant sets the overlapping quadrants (quadtrees) given an object
+ * @param {Object} object   A rectangle that is inserted in the quadtree
+ * @param {Object} quadtree A quadtree
  */
 function setQuadrant (object, quadtree) {
 
@@ -2820,7 +2927,7 @@ function forceObjectWithinBounds (object, rect) {
 }
 
 module.exports = Quadtree;
-},{"underscore":22}],22:[function(require,module,exports){
+},{"underscore":23}],23:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors

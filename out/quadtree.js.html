@@ -1,4 +1,32 @@
-'use strict';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: quadtree.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: quadtree.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>'use strict';
 
 var _ = require('underscore');
 
@@ -112,7 +140,7 @@ Quadtree.prototype.insert = function (object) {
     this.children.push(object);
     setQuadrant(object, this);
 
-    if (this.children.length > this.maxChildren && this.depth) {
+    if (this.children.length > this.maxChildren &amp;&amp; this.depth) {
       this.divide();
       return;
     }
@@ -123,7 +151,7 @@ Quadtree.prototype.insert = function (object) {
   // one of these quadTrees.  If it can't, it must be an orphan.
   } else {
 
-    for (var i = 0; i < numberOfChildren; i++) {
+    for (var i = 0; i &lt; numberOfChildren; i++) {
       if (isWithinBounds(this.children[i], object)) {
         this.children[i].insert(object);
         return;
@@ -206,7 +234,7 @@ Quadtree.prototype.divide = function () {
     }))
   ];
 
-  for (var i = 0, l = children.length; i < l; i++) {
+  for (var i = 0, l = children.length; i &lt; l; i++) {
     this.insert(children[i]);
   }
 
@@ -219,17 +247,17 @@ Quadtree.prototype.divide = function () {
 Quadtree.prototype.collapse = function () {
 
   if (this.parent) {
-    if (this !== this.parent.children[0] && this !== this.parent.children[1] && this !== this.parent.children[2] && this !== this.parent.children[3]) {
+    if (this !== this.parent.children[0] &amp;&amp; this !== this.parent.children[1] &amp;&amp; this !== this.parent.children[2] &amp;&amp; this !== this.parent.children[3]) {
       throw 'This was a bug that was fixed, but I am paranoid this will get hit so I left it...';
     }
   }
   
-  if (this.parent && this.parent.canCollapse()) {
+  if (this.parent &amp;&amp; this.parent.canCollapse()) {
     this.parent.collapse();
     return; 
   }
 
-  if (this.canCollapse() && !this.isLeaf) {
+  if (this.canCollapse() &amp;&amp; !this.isLeaf) {
 
     var allChildrenAndOrphans = this.getOrphansAndChildren();
 
@@ -237,7 +265,7 @@ Quadtree.prototype.collapse = function () {
     this.orphans  = [];
     this.isLeaf   = true;
 
-    for (var i = 0; i < allChildrenAndOrphans.length; i++) {
+    for (var i = 0; i &lt; allChildrenAndOrphans.length; i++) {
       this.insert(allChildrenAndOrphans[i]);
     }  
 
@@ -249,7 +277,7 @@ Quadtree.prototype.collapse = function () {
  * Helper method that determines if the quadtree should collapse
  */
 Quadtree.prototype.canCollapse = function () {
-  return this.getOrphanAndChildCount() <= this.maxChildren;
+  return this.getOrphanAndChildCount() &lt;= this.maxChildren;
 }
 
 /**
@@ -268,7 +296,7 @@ Quadtree.prototype.getOrphanCount = function () {
     }
     return count; // should be 0.
   } else {
-    for (var i = 0; i < numberOfChildren; i++) {
+    for (var i = 0; i &lt; numberOfChildren; i++) {
       count += this.children[i].getOrphanCount();
     }
   }
@@ -287,7 +315,7 @@ Quadtree.prototype.getChildCount = function () {
       numberOfChildren = this.children.length;
 
   if (!this.isLeaf) {
-    for (var i = 0; i < numberOfChildren; i++) {
+    for (var i = 0; i &lt; numberOfChildren; i++) {
       count += this.children[i].getChildCount();
     }
   } else {
@@ -318,7 +346,7 @@ Quadtree.prototype.getOrphans = function () {
     
     orphans = this.orphans;
 
-    for (var i = 0; i < this.children.length; i++) {
+    for (var i = 0; i &lt; this.children.length; i++) {
       orphans = orphans.concat(this.children[i].getOrphans());
     }
 
@@ -339,7 +367,7 @@ Quadtree.prototype.getChildren = function () {
   if (this.isLeaf) {
     return this.children;
   } else {
-    for (var i = 0; i < this.children.length; i++) {
+    for (var i = 0; i &lt; this.children.length; i++) {
       children = children.concat(this.children[i].getChildren());
     }
   }
@@ -367,7 +395,7 @@ Quadtree.prototype.getQuadtreeCount = function () {
     return 0;
   }
 
-  for (var i = 0; i < this.children.length; i++) {
+  for (var i = 0; i &lt; this.children.length; i++) {
     count += this.children[i].getQuadtreeCount();
   }
 
@@ -390,14 +418,14 @@ Quadtree.prototype.getEntireQuadtreesOrphansAndChildren = function () {
 Quadtree.prototype.getParentOrphanComparisons = function () {
   
   var comparisonList  = [],
-      orphans         = this.parent && this.parent.orphans;
+      orphans         = this.parent &amp;&amp; this.parent.orphans;
 
   if (!orphans) {
     return comparisonList;
   }
 
-  for (var i = 0; i < orphans.length; i++) {
-    if ((orphans[i].quadrant & this.quadrant)) {
+  for (var i = 0; i &lt; orphans.length; i++) {
+    if ((orphans[i].quadrant &amp; this.quadrant)) {
       comparisonList.push(orphans[i]);
     }
   }
@@ -422,19 +450,19 @@ Quadtree.prototype.getOrphansAndChildrenInQuadrants = function (rect) {
   var orphansAndChildren = [],
       quadrant           = rect.quadrant;
 
-  if (quadrant & NORTH_WEST) {
+  if (quadrant &amp; NORTH_WEST) {
     orphansAndChildren = orphansAndChildren.concat(this.children[0].getOrphansAndChildren());
   }
   
-  if (quadrant & NORTH_EAST) {
+  if (quadrant &amp; NORTH_EAST) {
     orphansAndChildren = orphansAndChildren.concat(this.children[1].getOrphansAndChildren());
   }
 
-  if (quadrant & SOUTH_WEST) {
+  if (quadrant &amp; SOUTH_WEST) {
     orphansAndChildren = orphansAndChildren.concat(this.children[2].getOrphansAndChildren());
   }
 
-  if (quadrant & SOUTH_EAST) {
+  if (quadrant &amp; SOUTH_EAST) {
     orphansAndChildren = orphansAndChildren.concat(this.children[3].getOrphansAndChildren());
   }
 
@@ -456,8 +484,8 @@ Quadtree.prototype.getComparisons = function (rect) {
       directOrphans           = rect.parent.orphans,
       parentOrphanComparisons = rect.parent.getParentOrphanComparisons(rect); 
 
-  for (var i = 0; i < directOrphans.length; i++) {
-    if ((directOrphans[i].quadrant & rect.quadrant)) {
+  for (var i = 0; i &lt; directOrphans.length; i++) {
+    if ((directOrphans[i].quadrant &amp; rect.quadrant)) {
       comparisonList.push(directOrphans[i]);
     }
   }
@@ -531,7 +559,7 @@ function setQuadrant (object, quadtree) {
  * @return {Boolean}        [True if it is a rectangle]
  */
 function hasRectProps (object) {
-  return typeof object.width !== 'undefined' && object.height !== 'undefined' && object.x !== 'undefined' && object.y !== 'undefined';
+  return typeof object.width !== 'undefined' &amp;&amp; object.height !== 'undefined' &amp;&amp; object.x !== 'undefined' &amp;&amp; object.y !== 'undefined';
 }
 
 /**
@@ -559,10 +587,10 @@ function isWithinBounds (r1, r2) {
   var r1Bounds = getBounds(r1),
       r2Bounds = getBounds(r2);
       
-  return (r2Bounds.left   >= r1Bounds.left  &&
-          r2Bounds.right  <= r1Bounds.right &&
-          r2Bounds.top    >= r1Bounds.top   &&
-          r2Bounds.bottom <= r1Bounds.bottom);
+  return (r2Bounds.left   >= r1Bounds.left  &amp;&amp;
+          r2Bounds.right  &lt;= r1Bounds.right &amp;&amp;
+          r2Bounds.top    >= r1Bounds.top   &amp;&amp;
+          r2Bounds.bottom &lt;= r1Bounds.bottom);
 }
 
 /**
@@ -588,7 +616,7 @@ function isWithinBounds (r1, r2) {
  */
 function isIntersecting (r1, r2) { 
 
-  if (r1.radius && r2.radius) {
+  if (r1.radius &amp;&amp; r2.radius) {
     return isIntersectingCircles(r1, r2);
   } else {
     return isIntersectingSquares(r1, r2);
@@ -600,9 +628,9 @@ function isIntersectingSquares (r1, r2) {
   var r1Bounds = getBounds(r1),
       r2Bounds = getBounds(r2);
       
-  return (r1Bounds.left   < r2Bounds.right  &&
-          r1Bounds.right  > r2Bounds.left   &&
-          r1Bounds.top    < r2Bounds.bottom &&
+  return (r1Bounds.left   &lt; r2Bounds.right  &amp;&amp;
+          r1Bounds.right  > r2Bounds.left   &amp;&amp;
+          r1Bounds.top    &lt; r2Bounds.bottom &amp;&amp;
           r1Bounds.bottom > r2Bounds.top);
 
 }
@@ -613,14 +641,14 @@ function isIntersectingCircles (c1, c2) {
       dy       = c1.y - c2.y,
       distance = Math.sqrt(dx * dx + dy * dy);
 
-  return distance < c1.radius + c2.radius;
+  return distance &lt; c1.radius + c2.radius;
 }
 
 function getCollisions (comparisonList, rect) {
 
   var collisionList = [];
   
-  for (var i = 0; i < comparisonList.length; i++) {
+  for (var i = 0; i &lt; comparisonList.length; i++) {
     if (isIntersecting(comparisonList[i], rect)) {
       collisionList.push(comparisonList[i]);
     }
@@ -641,13 +669,13 @@ function forceObjectWithinBounds (object, rect) {
 
   var objectBounds    = getBounds(object),
       containerBounds = getBounds(rect),
-      isTooFarLeft    = objectBounds.left   < containerBounds.left,
+      isTooFarLeft    = objectBounds.left   &lt; containerBounds.left,
       isTooFarRight   = objectBounds.left   > containerBounds.right,
-      isTooFarAbove   = objectBounds.top    < containerBounds.top,
+      isTooFarAbove   = objectBounds.top    &lt; containerBounds.top,
       isTooFarBelow   = objectBounds.top    > containerBounds.bottom; 
 
   if (isTooFarLeft) {
-    while (object.x < containerBounds.left) {
+    while (object.x &lt; containerBounds.left) {
       object.x = containerBounds.right + object.x + rect.halfWidth;
     }
   }
@@ -659,7 +687,7 @@ function forceObjectWithinBounds (object, rect) {
   }
 
   if (isTooFarAbove) {
-    while (object.y < containerBounds.top) {
+    while (object.y &lt; containerBounds.top) {
       object.y = containerBounds.bottom + object.y + rect.halfHeight;
     }
   }
@@ -672,4 +700,26 @@ function forceObjectWithinBounds (object, rect) {
 
 }
 
-module.exports = Quadtree;
+module.exports = Quadtree;</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Quadtree.html">Quadtree</a></li></ul><h3>Global</h3><ul><li><a href="global.html#forceObjectWithinBounds">forceObjectWithinBounds</a></li><li><a href="global.html#getBounds">getBounds</a></li><li><a href="global.html#hasRectProps">hasRectProps</a></li><li><a href="global.html#isIntersecting">isIntersecting</a></li><li><a href="global.html#isWithinBounds">isWithinBounds</a></li><li><a href="global.html#rectPrototype">rectPrototype</a></li><li><a href="global.html#remove">remove</a></li><li><a href="global.html#setQuadrant">setQuadrant</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.2</a> on Tue Aug 04 2015 14:09:02 GMT-0400 (Eastern Daylight Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
