@@ -30,11 +30,6 @@ var sheildPrototype = {
         currentObject.impact(this);
         if (this.impact) {
           this.impact(currentObject);
-          if (this.currentHealth < 0) {
-            this.radius = 0;
-            this.width  = 0;
-            this.height = 0;
-          }
           this.hits.push({
             'x': currentObject.x,
             'y': currentObject.y,

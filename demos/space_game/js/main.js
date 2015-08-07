@@ -141,7 +141,7 @@ function init () {
       return img;
     }()),
     'x'       : 35,
-    'y'       : 50,
+    'y'       : 45,
     'viewport': myViewport,
     'static'  : true,
     'onClick' : function () {
@@ -204,6 +204,11 @@ function init () {
           'currentHealth': 5000,
           'impact': function (object) {
             this.currentHealth -= object.mass;
+            if (this.currentHealth < 0) {
+              sheildButton.isBusy = false;
+              this.off('update');
+              this.remove();
+            }
           },
         }));        
       }

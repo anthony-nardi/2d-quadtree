@@ -1007,7 +1007,7 @@ function init () {
       return img;
     }()),
     'x'       : 35,
-    'y'       : 50,
+    'y'       : 45,
     'viewport': myViewport,
     'static'  : true,
     'onClick' : function () {
@@ -1070,6 +1070,11 @@ function init () {
           'currentHealth': 5000,
           'impact': function (object) {
             this.currentHealth -= object.mass;
+            if (this.currentHealth < 0) {
+              sheildButton.isBusy = false;
+              this.off('update');
+              this.remove();
+            }
           },
         }));        
       }
@@ -1430,14 +1435,15 @@ module.exports = (function () {
     'z-index': 9999999,
 
     'color': '#ffffff',
+    'busyColor': 'green',
 
     'render': function (ctx, viewport) {
 
       var xPos = this.x,
           yPos = this.y;
 
-      ctx.strokeStyle = this.color;
-      
+      ctx.strokeStyle = this.isBusy ? this.busyColor : this.color;
+     
       if (this.static) {
         xPos = this.x + (viewport.x - viewport.width  / 2) * viewport.scale;
         yPos = this.y + (viewport.y - viewport.height / 2) * viewport.scale;
@@ -1467,7 +1473,13 @@ module.exports = (function () {
     },
 
     'isClicked': function (x, y) {
-      return (this.x <= x && this.x + this.width >= x && this.y <= y && this.y + this.height >= y);
+
+      var buttonLeft   = this.x * (1 + this.viewport.scale),
+          buttonRight  = buttonLeft + this.width,
+          buttonTop    =   this.y * (1 + this.viewport.scale),
+          buttonBottom = buttonTop + this.height;
+
+      return (buttonLeft <= x && buttonRight >= x && buttonTop <= y && buttonBottom >= y);
     }
 
   };
@@ -1624,11 +1636,6 @@ var sheildPrototype = {
         currentObject.impact(this);
         if (this.impact) {
           this.impact(currentObject);
-          if (this.currentHealth < 0) {
-            this.radius = 0;
-            this.width  = 0;
-            this.height = 0;
-          }
           this.hits.push({
             'x': currentObject.x,
             'y': currentObject.y,

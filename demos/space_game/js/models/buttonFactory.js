@@ -20,14 +20,15 @@ module.exports = (function () {
     'z-index': 9999999,
 
     'color': '#ffffff',
+    'busyColor': 'green',
 
     'render': function (ctx, viewport) {
 
       var xPos = this.x,
           yPos = this.y;
 
-      ctx.strokeStyle = this.color;
-      
+      ctx.strokeStyle = this.isBusy ? this.busyColor : this.color;
+     
       if (this.static) {
         xPos = this.x + (viewport.x - viewport.width  / 2) * viewport.scale;
         yPos = this.y + (viewport.y - viewport.height / 2) * viewport.scale;
@@ -57,7 +58,13 @@ module.exports = (function () {
     },
 
     'isClicked': function (x, y) {
-      return (this.x <= x && this.x + this.width >= x && this.y <= y && this.y + this.height >= y);
+
+      var buttonLeft   = this.x * (1 + this.viewport.scale),
+          buttonRight  = buttonLeft + this.width,
+          buttonTop    =   this.y * (1 + this.viewport.scale),
+          buttonBottom = buttonTop + this.height;
+
+      return (buttonLeft <= x && buttonRight >= x && buttonTop <= y && buttonBottom >= y);
     }
 
   };
