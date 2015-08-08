@@ -12,6 +12,7 @@ var QuadTree                   = require('./core/quadTree.js'),
     buttonFactory              = require('./models/buttonFactory'),
     turretFactory              = require('./models/turretFactory'),
     sheildFactory              = require('./models/sheildFactory'),
+    satelliteFactory           = require('./models/satelliteFactory'),
 
     MAP_WIDTH          = 20000,
     MAP_HEIGHT         = 20000,
@@ -20,6 +21,7 @@ var QuadTree                   = require('./core/quadTree.js'),
     TURRET_COST        = 1000,
     SHIP_COST          = 3000,
     SHEILD_COST        = 5000,
+    SATELLITE_COST     = 8000,
     PLANET_HIT_COST    = 500,
     ASTEROID_VALUE     = 300,
 
@@ -53,6 +55,89 @@ function init () {
     'width' : map.width,
     'height': map.height
   }));
+
+  function addStarsToBackground () {
+
+    var NUMBER_OF_SMALL_STARS  = 400,
+        NUMBER_OF_MEDIUM_STARS = 200,
+        NUMBER_OF_LARGE_STARS  = 100,
+        SMALL_STAR_SIZE        = 10,
+        MEDIUM_STAR_SIZE       = 20,
+        LARGE_STAR_SIZE        = 30;     
+
+    for (var i = 0; i < NUMBER_OF_SMALL_STARS; i++) {
+      
+      var randX  = Math.getRandomInt(map.x - map.halfWidth  / 2,  map.x  + map.halfWidth / 2),
+          randY  = Math.getRandomInt(map.y - map.halfHeight / 2, map.y  + map.halfHeight / 2);
+      
+      while (isIntersectingCircles({'x':randX, 'y':randY, 'radius': SMALL_STAR_SIZE}, {'x':planet.x, 'y':planet.y, 'radius': planet.radius * 1.25})) {
+        randX = Math.getRandomInt(map.x - map.halfWidth,  map.x  + map.halfWidth);
+        randY = Math.getRandomInt(map.y - map.halfHeight, map.y  + map.halfHeight);
+      }
+
+      myViewport.addObjectToAlwaysRender({
+        'x': randX,
+        'y': randY,
+        'width': SMALL_STAR_SIZE,
+        'height': SMALL_STAR_SIZE,
+        'render': function (ctx, viewport) {
+          var scale = viewport.scale;
+          ctx.fillStyle = 'white';
+          ctx.fillRect(this.x * scale, this.y * scale, this.width * scale, this.height * scale);
+        }
+      }); 
+    }
+    for (var i = 0; i < NUMBER_OF_MEDIUM_STARS; i++) {
+      
+      var randX  = Math.getRandomInt(map.x - map.halfWidth  / 2,  map.x  + map.halfWidth / 2),
+          randY  = Math.getRandomInt(map.y - map.halfHeight / 2, map.y  + map.halfHeight / 2);
+
+      myViewport.addObjectToAlwaysRender({
+        'x': randX,
+        'y': randY,
+        'width': MEDIUM_STAR_SIZE,
+        'height': MEDIUM_STAR_SIZE,
+        'lastViewportX': myViewport.x,
+        'lastViewportY': myViewport.y,
+        'render': function (ctx, viewport) {
+          
+          var scale = viewport.scale;
+          
+          this.x += (this.lastViewportX - myViewport.x) * scale * 0.3;
+          this.y += (this.lastViewportY - myViewport.y) * scale * 0.3;
+          this.lastViewportX = myViewport.x;
+          this.lastViewportY = myViewport.y;
+
+          ctx.fillStyle = 'white';
+          
+          ctx.fillRect(this.x * scale, this.y * scale, this.width * scale, this.height * scale);
+        }
+      }); 
+    }
+    for (var i = 0; i < NUMBER_OF_LARGE_STARS; i++) {
+      
+      var randX  = Math.getRandomInt(map.x - map.halfWidth  / 2,  map.x  + map.halfWidth / 2),
+          randY  = Math.getRandomInt(map.y - map.halfHeight / 2, map.y  + map.halfHeight / 2);
+
+      myViewport.addObjectToAlwaysRender({
+        'x': randX,
+        'y': randY,
+        'width': LARGE_STAR_SIZE,
+        'height': LARGE_STAR_SIZE,
+        'lastViewportX': myViewport.x,
+        'lastViewportY': myViewport.y,
+        'render': function (ctx, viewport) {
+          var scale = viewport.scale;
+          this.x += (this.lastViewportX - myViewport.x) * scale * 0.6;
+          this.y += (this.lastViewportY - myViewport.y) * scale * 0.6;
+          this.lastViewportX = myViewport.x;
+          this.lastViewportY = myViewport.y;
+          ctx.fillStyle = 'white';
+          ctx.fillRect(this.x * scale, this.y * scale, this.width * scale, this.height * scale);
+        }
+      }); 
+    }
+  }
 
   myViewport.addObjectToAlwaysRender({
     'x': 0,
@@ -215,6 +300,41 @@ function init () {
     }
   });
 
+  // Satellite Button
+  buttonFactory({
+    'img': (function () {
+      var img = new Image();
+      img.src = 'satelliteButton.png';
+      return img;
+    }()),
+    'x'       : 35,
+    'y'       : 205,
+    'viewport': myViewport,
+    'static'  : true,
+    'onClick' : function () {
+
+      var satelliteButton = this;
+      
+      if (money.value >= SATELLITE_COST) {
+
+        money.value = money.value - SATELLITE_COST;
+
+        satelliteButton.isBusy = true;
+
+        map.insert(satelliteFactory({
+          'x': planet.x + planet.radius + 100,
+          'y': planet.y + planet.radius + 100,
+          'viewport': myViewport,
+          'planet': planet,
+          'onPlacement': function () {
+            satelliteButton.isBusy = false;
+          }
+        }));
+
+      }
+    }
+  });
+
   function createNewPlayerShip () {
  
     setTimeout(function () {
@@ -228,6 +348,8 @@ function init () {
             'x':0.5,
             'y':0
           },
+          'x': planet.x,
+          'y': planet.y,
           'quadTree': map,
           'viewport': myViewport
         });
@@ -282,6 +404,8 @@ function init () {
     }));
 
   }
+
+  addStarsToBackground();
 
   function addMoneyWhenAsteroidIsDestroyed () {
     money.value = money.value + this.value;

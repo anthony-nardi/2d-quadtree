@@ -122,8 +122,9 @@ module.exports = (function () {
         var collidesList = this.getCollisions();
 
         for (var i = 0; i < collidesList.length; i++) {
-          if (collidesList[i].isPlanet) {
+          if (collidesList[i].isPlanet || collidesList[i].isSatellite) {
             this.isValidPlacement = true;
+            this.anchor = collidesList[i].isSatellite ? collidesList[i] : false; 
             this.resetAngle(0, 1);
             this.updateAngle(Math.atan2(this.y - collidesList[i].y, this.x - collidesList[i].x));
             this.x -= collidesList[i].x;
@@ -131,6 +132,7 @@ module.exports = (function () {
             this.normalize().mult(collidesList[i].radius - 20 + this.height / 2);
             this.x += collidesList[i].x;
             this.y += collidesList[i].y;
+            this.move(this.x, this.y);
             return;
           }
         }
@@ -140,7 +142,17 @@ module.exports = (function () {
         this.isValidPlacement = false;
         
       } else {
-
+        if (this.anchor) {
+          this.updateAngle(0.001);
+          this.angle.normalize();
+          var offset = createVector(this.angle.y, -this.angle.x);
+          var offsetX = offset.x * (this.anchor.radius - 20 + this.width  / 2);
+          var offsetY = offset.y * (this.anchor.radius - 20 + this.height / 2);
+          this.move(
+            offsetX +  this.anchor.planet.x + this.anchor.angle.x * this.anchor.distanceFromPlanetCenter, 
+            offsetY + this.anchor.planet.y + this.anchor.angle.y * this.anchor.distanceFromPlanetCenter
+          );
+        }
         if (this.cooldown <= 0) {
           this.fireBullet();
           this.cooldown  = this.maxCooldown;

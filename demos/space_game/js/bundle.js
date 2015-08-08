@@ -538,7 +538,7 @@ module.exports = [,,,
 'use strict';
 
 module.exports = require('../../../../js/quadtree.js');
-},{"../../../../js/quadtree.js":22}],8:[function(require,module,exports){
+},{"../../../../js/quadtree.js":23}],8:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -846,10 +846,10 @@ module.exports = (function () {
 
     that.on('input', function (inputs) {
       if (inputs('z')) {
-        that.zoomBy(-1);
+        that.zoomBy(-5);
       }
       if (inputs('x')) {
-        that.zoomBy(1);
+        that.zoomBy(5);
       }
       render = true;
     });
@@ -863,7 +863,7 @@ module.exports = (function () {
   };
 
 }());
-},{"../util/math/bounds":20,"../util/math/vector":21,"./clock":1,"./fullScreenDisplay":4,"./quadTree":7,"underscore":23}],9:[function(require,module,exports){
+},{"../util/math/bounds":21,"../util/math/vector":22,"./clock":1,"./fullScreenDisplay":4,"./quadTree":7,"underscore":24}],9:[function(require,module,exports){
 'use strict';
 
 
@@ -878,6 +878,7 @@ var QuadTree                   = require('./core/quadTree.js'),
     buttonFactory              = require('./models/buttonFactory'),
     turretFactory              = require('./models/turretFactory'),
     sheildFactory              = require('./models/sheildFactory'),
+    satelliteFactory           = require('./models/satelliteFactory'),
 
     MAP_WIDTH          = 20000,
     MAP_HEIGHT         = 20000,
@@ -886,6 +887,7 @@ var QuadTree                   = require('./core/quadTree.js'),
     TURRET_COST        = 1000,
     SHIP_COST          = 3000,
     SHEILD_COST        = 5000,
+    SATELLITE_COST     = 8000,
     PLANET_HIT_COST    = 500,
     ASTEROID_VALUE     = 300,
 
@@ -919,6 +921,89 @@ function init () {
     'width' : map.width,
     'height': map.height
   }));
+
+  function addStarsToBackground () {
+
+    var NUMBER_OF_SMALL_STARS  = 400,
+        NUMBER_OF_MEDIUM_STARS = 200,
+        NUMBER_OF_LARGE_STARS  = 100,
+        SMALL_STAR_SIZE        = 10,
+        MEDIUM_STAR_SIZE       = 20,
+        LARGE_STAR_SIZE        = 30;     
+
+    for (var i = 0; i < NUMBER_OF_SMALL_STARS; i++) {
+      
+      var randX  = Math.getRandomInt(map.x - map.halfWidth  / 2,  map.x  + map.halfWidth / 2),
+          randY  = Math.getRandomInt(map.y - map.halfHeight / 2, map.y  + map.halfHeight / 2);
+      
+      while (isIntersectingCircles({'x':randX, 'y':randY, 'radius': SMALL_STAR_SIZE}, {'x':planet.x, 'y':planet.y, 'radius': planet.radius * 1.25})) {
+        randX = Math.getRandomInt(map.x - map.halfWidth,  map.x  + map.halfWidth);
+        randY = Math.getRandomInt(map.y - map.halfHeight, map.y  + map.halfHeight);
+      }
+
+      myViewport.addObjectToAlwaysRender({
+        'x': randX,
+        'y': randY,
+        'width': SMALL_STAR_SIZE,
+        'height': SMALL_STAR_SIZE,
+        'render': function (ctx, viewport) {
+          var scale = viewport.scale;
+          ctx.fillStyle = 'white';
+          ctx.fillRect(this.x * scale, this.y * scale, this.width * scale, this.height * scale);
+        }
+      }); 
+    }
+    for (var i = 0; i < NUMBER_OF_MEDIUM_STARS; i++) {
+      
+      var randX  = Math.getRandomInt(map.x - map.halfWidth  / 2,  map.x  + map.halfWidth / 2),
+          randY  = Math.getRandomInt(map.y - map.halfHeight / 2, map.y  + map.halfHeight / 2);
+
+      myViewport.addObjectToAlwaysRender({
+        'x': randX,
+        'y': randY,
+        'width': MEDIUM_STAR_SIZE,
+        'height': MEDIUM_STAR_SIZE,
+        'lastViewportX': myViewport.x,
+        'lastViewportY': myViewport.y,
+        'render': function (ctx, viewport) {
+          
+          var scale = viewport.scale;
+          
+          this.x += (this.lastViewportX - myViewport.x) * scale * 0.3;
+          this.y += (this.lastViewportY - myViewport.y) * scale * 0.3;
+          this.lastViewportX = myViewport.x;
+          this.lastViewportY = myViewport.y;
+
+          ctx.fillStyle = 'white';
+          
+          ctx.fillRect(this.x * scale, this.y * scale, this.width * scale, this.height * scale);
+        }
+      }); 
+    }
+    for (var i = 0; i < NUMBER_OF_LARGE_STARS; i++) {
+      
+      var randX  = Math.getRandomInt(map.x - map.halfWidth  / 2,  map.x  + map.halfWidth / 2),
+          randY  = Math.getRandomInt(map.y - map.halfHeight / 2, map.y  + map.halfHeight / 2);
+
+      myViewport.addObjectToAlwaysRender({
+        'x': randX,
+        'y': randY,
+        'width': LARGE_STAR_SIZE,
+        'height': LARGE_STAR_SIZE,
+        'lastViewportX': myViewport.x,
+        'lastViewportY': myViewport.y,
+        'render': function (ctx, viewport) {
+          var scale = viewport.scale;
+          this.x += (this.lastViewportX - myViewport.x) * scale * 0.6;
+          this.y += (this.lastViewportY - myViewport.y) * scale * 0.6;
+          this.lastViewportX = myViewport.x;
+          this.lastViewportY = myViewport.y;
+          ctx.fillStyle = 'white';
+          ctx.fillRect(this.x * scale, this.y * scale, this.width * scale, this.height * scale);
+        }
+      }); 
+    }
+  }
 
   myViewport.addObjectToAlwaysRender({
     'x': 0,
@@ -1081,6 +1166,41 @@ function init () {
     }
   });
 
+  // Satellite Button
+  buttonFactory({
+    'img': (function () {
+      var img = new Image();
+      img.src = 'satelliteButton.png';
+      return img;
+    }()),
+    'x'       : 35,
+    'y'       : 205,
+    'viewport': myViewport,
+    'static'  : true,
+    'onClick' : function () {
+
+      var satelliteButton = this;
+      
+      if (money.value >= SATELLITE_COST) {
+
+        money.value = money.value - SATELLITE_COST;
+
+        satelliteButton.isBusy = true;
+
+        map.insert(satelliteFactory({
+          'x': planet.x + planet.radius + 100,
+          'y': planet.y + planet.radius + 100,
+          'viewport': myViewport,
+          'planet': planet,
+          'onPlacement': function () {
+            satelliteButton.isBusy = false;
+          }
+        }));
+
+      }
+    }
+  });
+
   function createNewPlayerShip () {
  
     setTimeout(function () {
@@ -1094,6 +1214,8 @@ function init () {
             'x':0.5,
             'y':0
           },
+          'x': planet.x,
+          'y': planet.y,
           'quadTree': map,
           'viewport': myViewport
         });
@@ -1149,6 +1271,8 @@ function init () {
 
   }
 
+  addStarsToBackground();
+
   function addMoneyWhenAsteroidIsDestroyed () {
     money.value = money.value + this.value;
   }
@@ -1193,7 +1317,7 @@ if (!Math.getRandomInt) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   };
 }
-},{"./core/clock":1,"./core/events.js":2,"./core/quadTree.js":7,"./core/viewport":8,"./models/asteroidFactory":10,"./models/boxFactory":11,"./models/buttonFactory":13,"./models/planetFactory":15,"./models/sheildFactory":16,"./models/shipFactory":17,"./models/textFactory":18,"./models/turretFactory":19}],10:[function(require,module,exports){
+},{"./core/clock":1,"./core/events.js":2,"./core/quadTree.js":7,"./core/viewport":8,"./models/asteroidFactory":10,"./models/boxFactory":11,"./models/buttonFactory":13,"./models/planetFactory":15,"./models/satelliteFactory":16,"./models/sheildFactory":17,"./models/shipFactory":18,"./models/textFactory":19,"./models/turretFactory":20}],10:[function(require,module,exports){
 'use strict';
 
 var _              = require('underscore'),
@@ -1315,7 +1439,7 @@ function createAsteroid (config) {
 }
 
 module.exports = createAsteroid;
-},{"../core/clock":1,"../util/math/vector":21,"underscore":23}],11:[function(require,module,exports){
+},{"../core/clock":1,"../util/math/vector":22,"underscore":24}],11:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -1346,7 +1470,7 @@ module.exports = (function () {
   };
 
 }());                   
-},{"underscore":23}],12:[function(require,module,exports){
+},{"underscore":24}],12:[function(require,module,exports){
 'use strict';
 var _ = require('underscore');
 module.exports = (function () {
@@ -1412,7 +1536,7 @@ module.exports = (function () {
   };
 
 }());
-},{"../core/clock":1,"../util/math/vector":21,"underscore":23}],13:[function(require,module,exports){
+},{"../core/clock":1,"../util/math/vector":22,"underscore":24}],13:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -1495,7 +1619,7 @@ module.exports = (function () {
   };
 
 }());
-},{"underscore":23}],14:[function(require,module,exports){
+},{"underscore":24}],14:[function(require,module,exports){
 'use strict';
 // https://gist.github.com/gre/1650294
 var _   = require('underscore'),
@@ -1544,7 +1668,7 @@ function createExplosion (config) {
 
 module.exports = createExplosion;
 
-},{"underscore":23}],15:[function(require,module,exports){
+},{"underscore":24}],15:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -1603,7 +1727,68 @@ function createPlanet (config) {
 }
 
 module.exports = createPlanet;
-},{"underscore":23}],16:[function(require,module,exports){
+},{"underscore":24}],16:[function(require,module,exports){
+'use strict';
+
+var _           = require('underscore'),
+   createVector = require('../util/math/vector');
+
+var satellitePrototype = {
+  'radius': 100,
+  'z-index': 10,
+  'color': '#ccc',
+  'isSatellite': true,
+  'isStationary': false,
+  'update': function () {
+    // if (this.isStationary) {
+      this.angle.rotate(0.001);
+      this.move(this.planet.x + this.angle.x * this.distanceFromPlanetCenter, this.planet.y + this.angle.y * this.distanceFromPlanetCenter);
+    // }
+  },
+  'render': function (ctx, viewport) {
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius * viewport.scale, 0, 2 * Math.PI, false);
+    ctx.fill();
+    ctx.closePath();
+  },
+  'input': function (inputs) {
+
+    var mousemove = inputs('mousemove'),
+        click     = inputs('click');
+
+    if (!this.isStationary && mousemove && mousemove.srcElement.tagName === 'CANVAS') {
+      console.log('satellite pos')
+      var newPos = this.viewport.translateCanvasCoordinates({'x': mousemove.offsetX, 'y': mousemove.offsetY});
+      this.move(newPos.x, newPos.y);
+    }
+
+    if (!this.isStationary && click && click.srcElement.tagName === 'CANVAS' && this.isValidPlacement) {
+      this.off('input');
+      this.isStationary = true;
+      this.onPlacement();
+    }
+  }
+
+};
+
+function init (newSatellite) {
+  _.extend(newSatellite, createVector(newSatellite.planet.x, newSatellite.planet.y));
+  newSatellite.angle = createVector(1, 0);
+  newSatellite.width  = newSatellite.radius * 2;
+  newSatellite.height = newSatellite.radius * 2;
+  newSatellite.distanceFromPlanetCenter = newSatellite.planet.radius + 500;
+  newSatellite.on('update', newSatellite.update);
+  // newSatellite.on('input', newSatellite.input);
+  return newSatellite;
+}
+
+function createSatellite (config) {
+  return init(_.extend(Object.create(satellitePrototype), config));
+}
+
+module.exports = createSatellite;
+},{"../util/math/vector":22,"underscore":24}],17:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore'),
@@ -1711,7 +1896,7 @@ function createSheild (config) {
 }
 
 module.exports = createSheild;
-},{"underscore":23}],17:[function(require,module,exports){
+},{"underscore":24}],18:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore'), 
@@ -1961,7 +2146,7 @@ module.exports = (function () {
   };
 
 }());
-},{"../core/clock":1,"../core/events.js":2,"../util/math/vector":21,"./bulletFactory":12,"./explosionFactory":14,"underscore":23}],18:[function(require,module,exports){
+},{"../core/clock":1,"../core/events.js":2,"../util/math/vector":22,"./bulletFactory":12,"./explosionFactory":14,"underscore":24}],19:[function(require,module,exports){
 'use strict';
 var _ = require('underscore');
 module.exports = (function () {
@@ -2027,7 +2212,7 @@ module.exports = (function () {
 	};
 
 }());
-},{"underscore":23}],19:[function(require,module,exports){
+},{"underscore":24}],20:[function(require,module,exports){
  'use strict';
 
 var _ = require('underscore');
@@ -2152,8 +2337,9 @@ module.exports = (function () {
         var collidesList = this.getCollisions();
 
         for (var i = 0; i < collidesList.length; i++) {
-          if (collidesList[i].isPlanet) {
+          if (collidesList[i].isPlanet || collidesList[i].isSatellite) {
             this.isValidPlacement = true;
+            this.anchor = collidesList[i].isSatellite ? collidesList[i] : false; 
             this.resetAngle(0, 1);
             this.updateAngle(Math.atan2(this.y - collidesList[i].y, this.x - collidesList[i].x));
             this.x -= collidesList[i].x;
@@ -2161,6 +2347,7 @@ module.exports = (function () {
             this.normalize().mult(collidesList[i].radius - 20 + this.height / 2);
             this.x += collidesList[i].x;
             this.y += collidesList[i].y;
+            this.move(this.x, this.y);
             return;
           }
         }
@@ -2170,7 +2357,17 @@ module.exports = (function () {
         this.isValidPlacement = false;
         
       } else {
-
+        if (this.anchor) {
+          this.updateAngle(0.001);
+          this.angle.normalize();
+          var offset = createVector(this.angle.y, -this.angle.x);
+          var offsetX = offset.x * (this.anchor.radius - 20 + this.width  / 2);
+          var offsetY = offset.y * (this.anchor.radius - 20 + this.height / 2);
+          this.move(
+            offsetX +  this.anchor.planet.x + this.anchor.angle.x * this.anchor.distanceFromPlanetCenter, 
+            offsetY + this.anchor.planet.y + this.anchor.angle.y * this.anchor.distanceFromPlanetCenter
+          );
+        }
         if (this.cooldown <= 0) {
           this.fireBullet();
           this.cooldown  = this.maxCooldown;
@@ -2242,7 +2439,7 @@ module.exports = (function () {
   return create;
 
 }());
-},{"../core/clock":1,"../util/math/vector":21,"./bulletFactory":12,"underscore":23}],20:[function(require,module,exports){
+},{"../core/clock":1,"../util/math/vector":22,"./bulletFactory":12,"underscore":24}],21:[function(require,module,exports){
 'use strict';
 
 module.exports = function (obj) {
@@ -2258,7 +2455,7 @@ module.exports = function (obj) {
   };
 };
 
-},{}],21:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -2343,7 +2540,7 @@ module.exports = (function () {
 
 }());
 
-},{"underscore":23}],22:[function(require,module,exports){
+},{"underscore":24}],23:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -3019,7 +3216,7 @@ function forceObjectWithinBounds (object, rect) {
 }
 
 module.exports = Quadtree;
-},{"underscore":23}],23:[function(require,module,exports){
+},{"underscore":24}],24:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors

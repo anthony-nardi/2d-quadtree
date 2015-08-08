@@ -305,10 +305,10 @@ module.exports = (function () {
 
     that.on('input', function (inputs) {
       if (inputs('z')) {
-        that.zoomBy(-1);
+        that.zoomBy(-5);
       }
       if (inputs('x')) {
-        that.zoomBy(1);
+        that.zoomBy(5);
       }
       render = true;
     });
