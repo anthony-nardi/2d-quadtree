@@ -19,4 +19,4 @@
   - There are no tests
   - There is no good looking documentation for you to read
 
-## If you'd like to see any changes or have comments, feel free to email me.  
+## If you'd like to see any changes or have comments, feel free to email me or open an issue.  
