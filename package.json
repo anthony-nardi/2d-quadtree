@@ -1,6 +1,6 @@
 {
-  "name": "2d-quadtree-js",
-  "version": "1.0.3",
+  "name": "2d-quadtree",
+  "version": "1.0.4",
   "description": "Quadtree for games and simulations",
   "keywords": [
     "quadtree",

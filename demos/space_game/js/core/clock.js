@@ -16,11 +16,15 @@ module.exports = (function () {
       last           = 0,
       dtBuffer       = 0,
 
-      looping        = false;
+      looping        = false,
+      draw           = true,
+      requestAnimationFrameId;
+
+  function onRequestAnimationFrame () {
+    draw = true;
+  }
 
   function loop () {
-
-    // renderOpsPerSec.start();
    
     now = getCurrentTime();
 
@@ -35,7 +39,12 @@ module.exports = (function () {
       dtBuffer -= UPDATE_BUFFER;
     }
 
-    events.fire('render', now);
+    if (draw) {
+      events.fire('render', now);
+      draw = false;
+      requestAnimationFrameId = window.requestAnimationFrame(onRequestAnimationFrame);
+    }
+
 
     last = now;
 
@@ -43,8 +52,6 @@ module.exports = (function () {
       setTimeout(loop, 0);
     }
 
-    // renderOpsPerSec.end();
-  
   }
 
   function start () {
@@ -53,7 +60,7 @@ module.exports = (function () {
       console.log('Clock started.');
       looping = true;
       last    = getCurrentTime();
-
+      requestAnimationFrameId = window.requestAnimationFrame(onRequestAnimationFrame);
       loop();
 
     }
@@ -62,6 +69,7 @@ module.exports = (function () {
 
   function stop () {
     console.log('Clock stoped.');
+    cancelAnimationFrame(requestAnimationFrameId);
     looping = false;
 
   }

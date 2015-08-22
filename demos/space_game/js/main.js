@@ -78,11 +78,17 @@ function init () {
       myViewport.addObjectToAlwaysRender({
         'x': randX,
         'y': randY,
+        'lastViewportX': myViewport.x,
+        'lastViewportY': myViewport.y,
         'width': SMALL_STAR_SIZE,
         'height': SMALL_STAR_SIZE,
         'render': function (ctx, viewport) {
           var scale = viewport.scale;
           ctx.fillStyle = 'white';
+          this.x += (this.lastViewportX - myViewport.x) * scale * 0.1;
+          this.y += (this.lastViewportY - myViewport.y) * scale * 0.1;
+          this.lastViewportX = myViewport.x;
+          this.lastViewportY = myViewport.y;
           ctx.fillRect(this.x * scale, this.y * scale, this.width * scale, this.height * scale);
         }
       }); 
@@ -367,7 +373,7 @@ function init () {
 
   map.insert(myShip);
 
-  myViewport.zoomBy(2000);
+  myViewport.zoomBy(4000);
 
   myViewport.follow(myShip);
 

@@ -17,11 +17,15 @@ module.exports = (function () {
       last           = 0,
       dtBuffer       = 0,
 
-      looping        = false;
+      looping        = false,
+      draw           = true,
+      requestAnimationFrameId;
+
+  function onRequestAnimationFrame () {
+    draw = true;
+  }
 
   function loop () {
-
-    // renderOpsPerSec.start();
    
     now = getCurrentTime();
 
@@ -36,7 +40,12 @@ module.exports = (function () {
       dtBuffer -= UPDATE_BUFFER;
     }
 
-    events.fire('render', now);
+    if (draw) {
+      events.fire('render', now);
+      draw = false;
+      requestAnimationFrameId = window.requestAnimationFrame(onRequestAnimationFrame);
+    }
+
 
     last = now;
 
@@ -44,8 +53,6 @@ module.exports = (function () {
       setTimeout(loop, 0);
     }
 
-    // renderOpsPerSec.end();
-  
   }
 
   function start () {
@@ -54,7 +61,7 @@ module.exports = (function () {
       console.log('Clock started.');
       looping = true;
       last    = getCurrentTime();
-
+      requestAnimationFrameId = window.requestAnimationFrame(onRequestAnimationFrame);
       loop();
 
     }
@@ -63,6 +70,7 @@ module.exports = (function () {
 
   function stop () {
     console.log('Clock stoped.');
+    cancelAnimationFrame(requestAnimationFrameId);
     looping = false;
 
   }
@@ -233,8 +241,13 @@ module.exports = (function () {
   function resize () {
     if (toResize) {
       console.log('Resizing canvas.');
-      canvas.width  = window.innerWidth;
-      canvas.height = window.innerHeight;
+      if (window.innerHeight < window.innerWidth) {
+        canvas.width  = window.innerHeight;
+        canvas.height = window.innerHeight;
+      } else {
+        canvas.width  = window.innerWidth;
+        canvas.height = window.innerWidth;
+      }
       toResize      = false;
     }
   }
@@ -245,8 +258,14 @@ module.exports = (function () {
   }
 
   window.document.body.appendChild(canvas);
-  window.document.body.style.margin = '0px';
+  window.document.body.style.margin = '0 auto';
   window.document.body.style.overflow = 'hidden';
+  window.document.body.style.background = '#000';
+  canvas.style.display = 'block';
+  canvas.style.margin = '0 auto';
+  canvas.setAttribute('oncontextmenu', 'return false');
+
+
 
   canvas.ctx = ctx;
 
@@ -557,7 +576,7 @@ module.exports = (function () {
       viewportProto = _.extend({
 
         // PROPERTIES
-        'width'                   : 900,
+        'width'                   : 300,
         'height'                  : 300,
         'zIndex'                  : 0,
         'scale'                   : 1,
@@ -576,18 +595,12 @@ module.exports = (function () {
         'fullScreenDisplay'       : fullScreenDisplay,
         'fullScreenDisplayCanvas' : fullScreenDisplay.canvas,
         'fullScreenDisplayCtx'    : fullScreenDisplay.ctx,
-        'fullScreenDisplayRange'  : [0, 1, 0, 1],
-        'fullScreenDisplayX'      : 0,
-        'fullScreenDisplayY'      : 0,
 
         //-----PROTOTYPE METHODS--------
         'calculateDisplayPositions' : function () {
 
           // Fullscreen to fit browser window size
           fullScreenDisplay.resize();
-
-          // this.canvas.width  = this.fullScreenDisplayCanvas.width;
-          // this.canvas.height = this.fullScreenDisplayCanvas.height;
 
           //TO DO: Actually calculate x and y fullScreenDisplay positions...
           return this;
@@ -824,16 +837,6 @@ module.exports = (function () {
         this.y = this.following.y;
       }
 
-      // if (that.quadTree.getOrphans().indexOf(that) !== -1) {
-      //   // console.error('~~~~~~IM AN ORPHAN~~~~~~~~');
-      // }
-      //*.log('UPDATING VIEWPORT....');
-      // that.move(that.x + that.angle.x * that.speed * that.sim,
-      //           that.y + that.angle.y * that.speed * that.sim)
-      //     .zoomBy(that.zoomDirection * that.zoomSpeed * that.sim);
-
-      // return this;
-
     });
 
     that.on('render', function (time) {
@@ -944,11 +947,17 @@ function init () {
       myViewport.addObjectToAlwaysRender({
         'x': randX,
         'y': randY,
+        'lastViewportX': myViewport.x,
+        'lastViewportY': myViewport.y,
         'width': SMALL_STAR_SIZE,
         'height': SMALL_STAR_SIZE,
         'render': function (ctx, viewport) {
           var scale = viewport.scale;
           ctx.fillStyle = 'white';
+          this.x += (this.lastViewportX - myViewport.x) * scale * 0.1;
+          this.y += (this.lastViewportY - myViewport.y) * scale * 0.1;
+          this.lastViewportX = myViewport.x;
+          this.lastViewportY = myViewport.y;
           ctx.fillRect(this.x * scale, this.y * scale, this.width * scale, this.height * scale);
         }
       }); 
@@ -1233,7 +1242,7 @@ function init () {
 
   map.insert(myShip);
 
-  myViewport.zoomBy(2000);
+  myViewport.zoomBy(4000);
 
   myViewport.follow(myShip);
 

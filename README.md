@@ -11,8 +11,8 @@
     -  localhost:8000/demos/space_game
 
 # How to use in your project
-  - Install via npm: ```npm install 2d-quadtree-js ```
-  - Require in your files: ``` var Quadtree = require('2d-quadtree-js'); ```
+  - Install via npm: ```npm install 2d-quadtree ```
+  - Require in your files: ``` var Quadtree = require('2d-quadtree'); ```
 
 # Warning
   - This is my first published npm module...

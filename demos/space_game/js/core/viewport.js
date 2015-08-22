@@ -16,7 +16,7 @@ module.exports = (function () {
       viewportProto = _.extend({
 
         // PROPERTIES
-        'width'                   : 900,
+        'width'                   : 300,
         'height'                  : 300,
         'zIndex'                  : 0,
         'scale'                   : 1,
@@ -35,18 +35,12 @@ module.exports = (function () {
         'fullScreenDisplay'       : fullScreenDisplay,
         'fullScreenDisplayCanvas' : fullScreenDisplay.canvas,
         'fullScreenDisplayCtx'    : fullScreenDisplay.ctx,
-        'fullScreenDisplayRange'  : [0, 1, 0, 1],
-        'fullScreenDisplayX'      : 0,
-        'fullScreenDisplayY'      : 0,
 
         //-----PROTOTYPE METHODS--------
         'calculateDisplayPositions' : function () {
 
           // Fullscreen to fit browser window size
           fullScreenDisplay.resize();
-
-          // this.canvas.width  = this.fullScreenDisplayCanvas.width;
-          // this.canvas.height = this.fullScreenDisplayCanvas.height;
 
           //TO DO: Actually calculate x and y fullScreenDisplay positions...
           return this;
@@ -282,16 +276,6 @@ module.exports = (function () {
         this.x = this.following.x;
         this.y = this.following.y;
       }
-
-      // if (that.quadTree.getOrphans().indexOf(that) !== -1) {
-      //   // console.error('~~~~~~IM AN ORPHAN~~~~~~~~');
-      // }
-      //*.log('UPDATING VIEWPORT....');
-      // that.move(that.x + that.angle.x * that.speed * that.sim,
-      //           that.y + that.angle.y * that.speed * that.sim)
-      //     .zoomBy(that.zoomDirection * that.zoomSpeed * that.sim);
-
-      // return this;
 
     });
 
