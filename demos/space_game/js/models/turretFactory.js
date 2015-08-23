@@ -7,15 +7,25 @@ module.exports = (function () {
   var createVector  = require('../util/math/vector'),
       clock         = require('../core/clock'),
       createBullet  = require('./bulletFactory'),
-      img           = new Image();
+      createRocket  = require('./rocketFactory'),
+      buttonFactory = require('./buttonFactory'),
+      img           = new Image(),
+      bulletUpgradeImage_1 = new Image(),
+      rocketUpgradeImage_1 = new Image();
 
   img.src = './turret.png';
+  bulletUpgradeImage_1.src = './turretBulletUpgrade_1.png';
+  rocketUpgradeImage_1.src = './turretRocketUpgrade_1.png';
 
-  img.onload = function () {
-    img.width  /= 2.5;
-    img.height /= 2.5;
-    console.log('turret image loaded');
-  };
+
+  img.onload                  = scaleImage;
+  // bulletUpgradeImage_1.onload = scaleImage;
+  // rocketUpgradeImage_1.onload = scaleImage;
+
+  function scaleImage () {
+    this.width  /= 2.5;
+    this.height /= 2.5;
+  }
 
   var turretPrototype = {
 
@@ -47,6 +57,8 @@ module.exports = (function () {
     'maxBullets': 1,
     'cooldown': 1,
     'maxCooldown': 3,
+
+    'firesBullets': true,
 
     'fireBullet': function () {
 
@@ -81,6 +93,30 @@ module.exports = (function () {
 
       this.bullets.push(this.quadTree.insert(newBullet));
     },
+
+    'fireRocket': function () {
+
+      var that = this;
+
+      var newRocket = createRocket({
+        'x': this.x,
+        'y': this.y,
+        'quadTree': this.quadTree,
+        'getRotation': function () { return this.angle.toRadians(); },
+        'angle': createVector(this.angle.y, -this.angle.x)
+      });
+
+      if (newRocket) {
+
+        newRocket.onCollision = function () {
+          that.rockets.splice(that.rockets.indexOf(newRocket, 1));
+          this.removeNextUpdate = true;
+        };
+
+        this.rockets.push(this.quadTree.insert(newRocket));
+
+      }
+    },
     
     'getRotation': function () {
       return this.angle.toRadians();
@@ -104,6 +140,70 @@ module.exports = (function () {
       this.angle.x = x || 0;
       this.angle.y = y || 0;
     },
+
+    'isClicked': function (x, y) {
+
+      var clickCoordinates = this.viewport.translateCanvasCoordinates({x: x, y: y}),
+          turretLeft   = this.x - this.width / 2,
+          turretRight  = turretLeft + this.width,
+          turretTop    = this.y - this.height / 2,
+          turretBottom = turretTop + this.height;
+
+      return (turretLeft <= clickCoordinates.x && turretRight >= clickCoordinates.x && turretTop <= clickCoordinates.y && turretBottom >= clickCoordinates.y);
+    },
+
+    'showUpgradeTree': function () {
+      
+      var currentTurret = this;
+
+      if (this.upgrading) {
+        return false;
+      }
+
+      console.log('Show upgrade tree');
+      
+      var rocketUpgradeButton = buttonFactory({
+        'img': rocketUpgradeImage_1,
+        'x': this.x - 400,
+        'y': this.y - 400,
+        'width': 400,
+        'height': 400,
+        'viewport': this.viewport,
+        'static': false,
+        'z-index': 999999999,
+        'quadTree': this.quadTree,
+        'onClick': function () {
+          console.log('Rocket upgrade');
+          this.viewport.alwaysRender.splice(this.viewport.alwaysRender.indexOf(bulletUpgradeButton), 1);
+          this.viewport.alwaysRender.splice(this.viewport.alwaysRender.indexOf(rocketUpgradeButton), 1);
+          currentTurret.firesBullets = false;
+          currentTurret.maxCooldown  = 7;
+        }
+      });
+
+
+      var bulletUpgradeButton = buttonFactory({
+        'img': bulletUpgradeImage_1,
+        'x': this.x + 400,
+        'y': this.y - 400,
+        'width': 400,
+        'height': 400,
+        'viewport': this.viewport,
+        'static': false,
+        'z-index': 999999999,
+        'quadTree': this.quadTree,
+        'onClick': function () {
+          console.log('Bullet upgrade');
+          this.viewport.alwaysRender.splice(this.viewport.alwaysRender.indexOf(bulletUpgradeButton), 1);
+          this.viewport.alwaysRender.splice(this.viewport.alwaysRender.indexOf(rocketUpgradeButton), 1);
+          currentTurret.maxBullets = 5;
+          currentTurret.maxCooldown = 1;
+        }
+      });
+
+      this.upgrading = true;
+
+    },   
 
     'update': function () {
 
@@ -153,8 +253,14 @@ module.exports = (function () {
             offsetY + this.anchor.planet.y + this.anchor.angle.y * this.anchor.distanceFromPlanetCenter
           );
         }
+        
+
         if (this.cooldown <= 0) {
-          this.fireBullet();
+          if (this.firesBullets) {
+            this.fireBullet();
+          } else {
+            this.fireRocket();
+          }
           this.cooldown  = this.maxCooldown;
         }
 
@@ -176,9 +282,13 @@ module.exports = (function () {
       }
 
       if (!this.isStationary && click && click.srcElement.tagName === 'CANVAS' && this.isValidPlacement) {
-        this.off('input');
         this.isStationary = true;
         this.onPlacement();
+        return;
+      }
+
+      if (this.isStationary && click && click.srcElement.tagName === 'CANVAS' && this.isClicked(click.offsetX, click.offsetY)) {
+        this.showUpgradeTree(click.offsetX, click.offsetY);
       }
 
     },
@@ -212,6 +322,7 @@ module.exports = (function () {
     newTurret.on('input',  newTurret.input);
 
     newTurret.bullets = [];
+    newTurret.rockets = [];
 
     return newTurret;
 

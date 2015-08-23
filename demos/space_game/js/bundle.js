@@ -557,7 +557,7 @@ module.exports = [,,,
 'use strict';
 
 module.exports = require('../../../../js/quadtree.js');
-},{"../../../../js/quadtree.js":23}],8:[function(require,module,exports){
+},{"../../../../js/quadtree.js":24}],8:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -668,7 +668,7 @@ module.exports = (function () {
             return this;
           }
           this.calculateScale();
-          // this.updateParent();
+
           return this;
         },
 
@@ -866,7 +866,7 @@ module.exports = (function () {
   };
 
 }());
-},{"../util/math/bounds":21,"../util/math/vector":22,"./clock":1,"./fullScreenDisplay":4,"./quadTree":7,"underscore":24}],9:[function(require,module,exports){
+},{"../util/math/bounds":22,"../util/math/vector":23,"./clock":1,"./fullScreenDisplay":4,"./quadTree":7,"underscore":25}],9:[function(require,module,exports){
 'use strict';
 
 
@@ -902,7 +902,7 @@ var QuadTree                   = require('./core/quadTree.js'),
 
     SHIP_RESPAWN_TIMER = 3000,
 
-    NUMBER_OF_STARTING_ASTEROIDS = 200,
+    NUMBER_OF_STARTING_ASTEROIDS = 1,
 
     map = new QuadTree({
       'width' : MAP_WIDTH,
@@ -1326,7 +1326,7 @@ if (!Math.getRandomInt) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   };
 }
-},{"./core/clock":1,"./core/events.js":2,"./core/quadTree.js":7,"./core/viewport":8,"./models/asteroidFactory":10,"./models/boxFactory":11,"./models/buttonFactory":13,"./models/planetFactory":15,"./models/satelliteFactory":16,"./models/sheildFactory":17,"./models/shipFactory":18,"./models/textFactory":19,"./models/turretFactory":20}],10:[function(require,module,exports){
+},{"./core/clock":1,"./core/events.js":2,"./core/quadTree.js":7,"./core/viewport":8,"./models/asteroidFactory":10,"./models/boxFactory":11,"./models/buttonFactory":13,"./models/planetFactory":15,"./models/satelliteFactory":17,"./models/sheildFactory":18,"./models/shipFactory":19,"./models/textFactory":20,"./models/turretFactory":21}],10:[function(require,module,exports){
 'use strict';
 
 var _              = require('underscore'),
@@ -1448,7 +1448,7 @@ function createAsteroid (config) {
 }
 
 module.exports = createAsteroid;
-},{"../core/clock":1,"../util/math/vector":22,"underscore":24}],11:[function(require,module,exports){
+},{"../core/clock":1,"../util/math/vector":23,"underscore":25}],11:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -1479,7 +1479,7 @@ module.exports = (function () {
   };
 
 }());                   
-},{"underscore":24}],12:[function(require,module,exports){
+},{"underscore":25}],12:[function(require,module,exports){
 'use strict';
 var _ = require('underscore');
 module.exports = (function () {
@@ -1545,7 +1545,7 @@ module.exports = (function () {
   };
 
 }());
-},{"../core/clock":1,"../util/math/vector":22,"underscore":24}],13:[function(require,module,exports){
+},{"../core/clock":1,"../util/math/vector":23,"underscore":25}],13:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -1573,18 +1573,25 @@ module.exports = (function () {
     'render': function (ctx, viewport) {
 
       var xPos = this.x,
-          yPos = this.y;
+          yPos = this.y,
+          width = this.width,
+          height = this.height;
 
       ctx.strokeStyle = this.isBusy ? this.busyColor : this.color;
      
       if (this.static) {
         xPos = this.x + (viewport.x - viewport.width  / 2) * viewport.scale;
         yPos = this.y + (viewport.y - viewport.height / 2) * viewport.scale;
+      } else {
+        width  = width  * viewport.scale;
+        height = height * viewport.scale;
+        xPos   = -width  / 2;
+        yPos   = -height / 2;
       }
 
-      ctx.drawImage(this.img, xPos, yPos, this.width, this.height);
+      ctx.drawImage(this.img, xPos, yPos, width, height);
 
-      ctx.strokeRect(xPos, yPos, this.width, this.height);
+      ctx.strokeRect(xPos, yPos, width, height);
 
     },
 
@@ -1606,13 +1613,23 @@ module.exports = (function () {
     },
 
     'isClicked': function (x, y) {
+      if (this.static) {
+        var buttonLeft   = this.x * (1 + this.viewport.scale),
+            buttonRight  = buttonLeft + this.width,
+            buttonTop    =   this.y * (1 + this.viewport.scale),
+            buttonBottom = buttonTop + this.height;
 
-      var buttonLeft   = this.x * (1 + this.viewport.scale),
-          buttonRight  = buttonLeft + this.width,
-          buttonTop    =   this.y * (1 + this.viewport.scale),
-          buttonBottom = buttonTop + this.height;
+        return (buttonLeft <= x && buttonRight >= x && buttonTop <= y && buttonBottom >= y);
 
-      return (buttonLeft <= x && buttonRight >= x && buttonTop <= y && buttonBottom >= y);
+      } else {
+        var clickCoordinates = this.viewport.translateCanvasCoordinates({x: x, y: y}),
+          turretLeft   = this.x - this.width / 2,
+          turretRight  = turretLeft + this.width,
+          turretTop    = this.y - this.height / 2,
+          turretBottom = turretTop + this.height;
+
+      return (turretLeft <= clickCoordinates.x && turretRight >= clickCoordinates.x && turretTop <= clickCoordinates.y && turretBottom >= clickCoordinates.y);
+      }
     }
 
   };
@@ -1628,7 +1645,7 @@ module.exports = (function () {
   };
 
 }());
-},{"underscore":24}],14:[function(require,module,exports){
+},{"underscore":25}],14:[function(require,module,exports){
 'use strict';
 // https://gist.github.com/gre/1650294
 var _   = require('underscore'),
@@ -1677,7 +1694,7 @@ function createExplosion (config) {
 
 module.exports = createExplosion;
 
-},{"underscore":24}],15:[function(require,module,exports){
+},{"underscore":25}],15:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -1736,7 +1753,162 @@ function createPlanet (config) {
 }
 
 module.exports = createPlanet;
-},{"underscore":24}],16:[function(require,module,exports){
+},{"underscore":25}],16:[function(require,module,exports){
+'use strict';
+
+var _ = require('underscore');
+
+var createVector = require('../util/math/vector'),
+    img          = new Image();
+
+img.src = './rocket.png';
+
+img.onload = function () {
+  img.width  /= 2.5;
+  img.height /= 2.5;
+  rocketPrototype.width  = img.width;
+  rocketPrototype.height = img.height;
+};
+
+var rocketPrototype = {
+  'x': 0,
+  'y': 0,
+  'z-index': 100,
+  'removeNextUpdate': false,
+  'angle': {},
+  'turnRate': Math.PI / 280,
+  'maxSpeed': 10,
+  'mass': 30,
+  'force': 3,
+  'acceleration': {},
+  'getRotation': function () { 
+    return this.angle.toRadians(); 
+  },
+  'updatePosition': function () {
+    this.add(this.velocity);
+    this.move(this.x, this.y);
+  },
+
+  'updateVelocity': function () {
+    this.velocity.add(this.angle.normalize().mult(this.force / this.mass));
+  },
+
+  'limitVelocity': function () {
+    if (this.velocity.length() > this.maxSpeed) {
+
+      this.velocity.mult(this.maxSpeed / this.velocity.length());
+
+    }
+  },
+  'render': function (ctx, viewport) {
+
+    var xPos = -this.width  / 2 * viewport.scale,
+        yPos = -this.height / 2 * viewport.scale;
+
+
+    ctx.drawImage(img, xPos, yPos, this.width * viewport.scale, this.height * viewport.scale);
+
+  },
+  'update': function () {
+
+    if (this.removeNextUpdate) {
+      this.off('update');
+      this.remove();
+      return;
+    }
+    if (this.target.removeNextUpdate) {
+      console.log('Aquiring new target');
+      this.getTarget();
+    }
+    var collidesList = this.getCollisions();
+
+    for (var i = 0; i < collidesList.length; i += 1) {
+      if (collidesList[i].isAsteroid) {
+        collidesList[i].impact(this);
+        console.log('ROCKET HIT');
+        this.onCollision();
+        return;
+      }
+    }
+  
+    var targetAngle  = Math.atan2(this.y - this.target.y, this.x - this.target.x),
+        currentAngle = this.getRotation(),
+        deltaAngle   = currentAngle - targetAngle;
+
+    if (deltaAngle > Math.PI) {
+      deltaAngle -= Math.PI * 2; 
+    }
+    if (deltaAngle < -Math.PI) {
+      deltaAngle += Math.PI * 2;
+    }
+
+    if (deltaAngle > 0) {
+      this.angle.rotate(this.turnRate);
+    } else {
+      this.angle.rotate(-this.turnRate);
+    }
+    
+    this.updatePosition();
+    this.updateVelocity();
+    this.limitVelocity();
+
+  },
+  'getTarget': function () {
+
+    var allObjects    = this.quadTree.getEntireQuadtreesOrphansAndChildren(),
+        closestTarget,
+        closestTargetDistance;
+
+    for (var i = 0; i < allObjects.length; i++) {
+      if (allObjects[i].isAsteroid) {
+        if (!closestTarget) {
+          closestTarget = allObjects[i];
+          closestTargetDistance = getDistance(this, closestTarget);
+        } else {
+          if (getDistance(this, allObjects[i]) < closestTargetDistance) {
+            closestTarget = allObjects[i];
+            closestTargetDistance = getDistance(this, allObjects[i]);
+          }
+        }
+      } 
+    }
+
+    this.target = closestTarget;
+
+  }
+};
+
+function getDistance (obj1, obj2) {
+  return Math.sqrt(Math.pow(obj1.x - obj2.x, 2) + (Math.pow(obj1.y - obj2.y, 2)));
+}
+
+function init (newRocket) {
+  
+  newRocket.velocity     = {};
+  newRocket.acceleration = {};
+  
+  _.extend(newRocket.velocity,     createVector(0, 0));
+  _.extend(newRocket.acceleration, createVector(0, 0));
+  _.extend(newRocket, createVector(newRocket.x, newRocket.y));
+
+  _.extend(newRocket.angle, createVector(newRocket.angle.x, newRocket.angle.y));
+  
+  newRocket.getTarget();
+
+  if (!newRocket.target) {
+    return;
+  }  
+  newRocket.on('update', newRocket.update);
+  
+  return newRocket;
+}
+
+function createRocket (config) {
+  return init(_.extend(Object.create(rocketPrototype), config));
+}
+
+module.exports = createRocket;
+},{"../util/math/vector":23,"underscore":25}],17:[function(require,module,exports){
 'use strict';
 
 var _           = require('underscore'),
@@ -1797,7 +1969,7 @@ function createSatellite (config) {
 }
 
 module.exports = createSatellite;
-},{"../util/math/vector":22,"underscore":24}],17:[function(require,module,exports){
+},{"../util/math/vector":23,"underscore":25}],18:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore'),
@@ -1905,7 +2077,7 @@ function createSheild (config) {
 }
 
 module.exports = createSheild;
-},{"underscore":24}],18:[function(require,module,exports){
+},{"underscore":25}],19:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore'), 
@@ -2155,7 +2327,7 @@ module.exports = (function () {
   };
 
 }());
-},{"../core/clock":1,"../core/events.js":2,"../util/math/vector":22,"./bulletFactory":12,"./explosionFactory":14,"underscore":24}],19:[function(require,module,exports){
+},{"../core/clock":1,"../core/events.js":2,"../util/math/vector":23,"./bulletFactory":12,"./explosionFactory":14,"underscore":25}],20:[function(require,module,exports){
 'use strict';
 var _ = require('underscore');
 module.exports = (function () {
@@ -2221,7 +2393,7 @@ module.exports = (function () {
 	};
 
 }());
-},{"underscore":24}],20:[function(require,module,exports){
+},{"underscore":25}],21:[function(require,module,exports){
  'use strict';
 
 var _ = require('underscore');
@@ -2231,15 +2403,25 @@ module.exports = (function () {
   var createVector  = require('../util/math/vector'),
       clock         = require('../core/clock'),
       createBullet  = require('./bulletFactory'),
-      img           = new Image();
+      createRocket  = require('./rocketFactory'),
+      buttonFactory = require('./buttonFactory'),
+      img           = new Image(),
+      bulletUpgradeImage_1 = new Image(),
+      rocketUpgradeImage_1 = new Image();
 
   img.src = './turret.png';
+  bulletUpgradeImage_1.src = './turretBulletUpgrade_1.png';
+  rocketUpgradeImage_1.src = './turretRocketUpgrade_1.png';
 
-  img.onload = function () {
-    img.width  /= 2.5;
-    img.height /= 2.5;
-    console.log('turret image loaded');
-  };
+
+  img.onload                  = scaleImage;
+  // bulletUpgradeImage_1.onload = scaleImage;
+  // rocketUpgradeImage_1.onload = scaleImage;
+
+  function scaleImage () {
+    this.width  /= 2.5;
+    this.height /= 2.5;
+  }
 
   var turretPrototype = {
 
@@ -2271,6 +2453,8 @@ module.exports = (function () {
     'maxBullets': 1,
     'cooldown': 1,
     'maxCooldown': 3,
+
+    'firesBullets': true,
 
     'fireBullet': function () {
 
@@ -2305,6 +2489,30 @@ module.exports = (function () {
 
       this.bullets.push(this.quadTree.insert(newBullet));
     },
+
+    'fireRocket': function () {
+
+      var that = this;
+
+      var newRocket = createRocket({
+        'x': this.x,
+        'y': this.y,
+        'quadTree': this.quadTree,
+        'getRotation': function () { return this.angle.toRadians(); },
+        'angle': createVector(this.angle.y, -this.angle.x)
+      });
+
+      if (newRocket) {
+
+        newRocket.onCollision = function () {
+          that.rockets.splice(that.rockets.indexOf(newRocket, 1));
+          this.removeNextUpdate = true;
+        };
+
+        this.rockets.push(this.quadTree.insert(newRocket));
+
+      }
+    },
     
     'getRotation': function () {
       return this.angle.toRadians();
@@ -2328,6 +2536,70 @@ module.exports = (function () {
       this.angle.x = x || 0;
       this.angle.y = y || 0;
     },
+
+    'isClicked': function (x, y) {
+
+      var clickCoordinates = this.viewport.translateCanvasCoordinates({x: x, y: y}),
+          turretLeft   = this.x - this.width / 2,
+          turretRight  = turretLeft + this.width,
+          turretTop    = this.y - this.height / 2,
+          turretBottom = turretTop + this.height;
+
+      return (turretLeft <= clickCoordinates.x && turretRight >= clickCoordinates.x && turretTop <= clickCoordinates.y && turretBottom >= clickCoordinates.y);
+    },
+
+    'showUpgradeTree': function () {
+      
+      var currentTurret = this;
+
+      if (this.upgrading) {
+        return false;
+      }
+
+      console.log('Show upgrade tree');
+      
+      var rocketUpgradeButton = buttonFactory({
+        'img': rocketUpgradeImage_1,
+        'x': this.x - 400,
+        'y': this.y - 400,
+        'width': 400,
+        'height': 400,
+        'viewport': this.viewport,
+        'static': false,
+        'z-index': 999999999,
+        'quadTree': this.quadTree,
+        'onClick': function () {
+          console.log('Rocket upgrade');
+          this.viewport.alwaysRender.splice(this.viewport.alwaysRender.indexOf(bulletUpgradeButton), 1);
+          this.viewport.alwaysRender.splice(this.viewport.alwaysRender.indexOf(rocketUpgradeButton), 1);
+          currentTurret.firesBullets = false;
+          currentTurret.maxCooldown  = 7;
+        }
+      });
+
+
+      var bulletUpgradeButton = buttonFactory({
+        'img': bulletUpgradeImage_1,
+        'x': this.x + 400,
+        'y': this.y - 400,
+        'width': 400,
+        'height': 400,
+        'viewport': this.viewport,
+        'static': false,
+        'z-index': 999999999,
+        'quadTree': this.quadTree,
+        'onClick': function () {
+          console.log('Bullet upgrade');
+          this.viewport.alwaysRender.splice(this.viewport.alwaysRender.indexOf(bulletUpgradeButton), 1);
+          this.viewport.alwaysRender.splice(this.viewport.alwaysRender.indexOf(rocketUpgradeButton), 1);
+          currentTurret.maxBullets = 5;
+          currentTurret.maxCooldown = 1;
+        }
+      });
+
+      this.upgrading = true;
+
+    },   
 
     'update': function () {
 
@@ -2377,8 +2649,14 @@ module.exports = (function () {
             offsetY + this.anchor.planet.y + this.anchor.angle.y * this.anchor.distanceFromPlanetCenter
           );
         }
+        
+
         if (this.cooldown <= 0) {
-          this.fireBullet();
+          if (this.firesBullets) {
+            this.fireBullet();
+          } else {
+            this.fireRocket();
+          }
           this.cooldown  = this.maxCooldown;
         }
 
@@ -2400,9 +2678,13 @@ module.exports = (function () {
       }
 
       if (!this.isStationary && click && click.srcElement.tagName === 'CANVAS' && this.isValidPlacement) {
-        this.off('input');
         this.isStationary = true;
         this.onPlacement();
+        return;
+      }
+
+      if (this.isStationary && click && click.srcElement.tagName === 'CANVAS' && this.isClicked(click.offsetX, click.offsetY)) {
+        this.showUpgradeTree(click.offsetX, click.offsetY);
       }
 
     },
@@ -2436,6 +2718,7 @@ module.exports = (function () {
     newTurret.on('input',  newTurret.input);
 
     newTurret.bullets = [];
+    newTurret.rockets = [];
 
     return newTurret;
 
@@ -2448,7 +2731,7 @@ module.exports = (function () {
   return create;
 
 }());
-},{"../core/clock":1,"../util/math/vector":22,"./bulletFactory":12,"underscore":24}],21:[function(require,module,exports){
+},{"../core/clock":1,"../util/math/vector":23,"./bulletFactory":12,"./buttonFactory":13,"./rocketFactory":16,"underscore":25}],22:[function(require,module,exports){
 'use strict';
 
 module.exports = function (obj) {
@@ -2464,7 +2747,7 @@ module.exports = function (obj) {
   };
 };
 
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -2549,7 +2832,7 @@ module.exports = (function () {
 
 }());
 
-},{"underscore":24}],23:[function(require,module,exports){
+},{"underscore":25}],24:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -3225,7 +3508,7 @@ function forceObjectWithinBounds (object, rect) {
 }
 
 module.exports = Quadtree;
-},{"underscore":24}],24:[function(require,module,exports){
+},{"underscore":25}],25:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors

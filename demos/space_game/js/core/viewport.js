@@ -108,7 +108,7 @@ module.exports = (function () {
             return this;
           }
           this.calculateScale();
-          // this.updateParent();
+
           return this;
         },
 

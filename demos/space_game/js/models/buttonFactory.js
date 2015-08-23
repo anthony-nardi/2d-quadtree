@@ -25,18 +25,25 @@ module.exports = (function () {
     'render': function (ctx, viewport) {
 
       var xPos = this.x,
-          yPos = this.y;
+          yPos = this.y,
+          width = this.width,
+          height = this.height;
 
       ctx.strokeStyle = this.isBusy ? this.busyColor : this.color;
      
       if (this.static) {
         xPos = this.x + (viewport.x - viewport.width  / 2) * viewport.scale;
         yPos = this.y + (viewport.y - viewport.height / 2) * viewport.scale;
+      } else {
+        width  = width  * viewport.scale;
+        height = height * viewport.scale;
+        xPos   = -width  / 2;
+        yPos   = -height / 2;
       }
 
-      ctx.drawImage(this.img, xPos, yPos, this.width, this.height);
+      ctx.drawImage(this.img, xPos, yPos, width, height);
 
-      ctx.strokeRect(xPos, yPos, this.width, this.height);
+      ctx.strokeRect(xPos, yPos, width, height);
 
     },
 
@@ -58,13 +65,23 @@ module.exports = (function () {
     },
 
     'isClicked': function (x, y) {
+      if (this.static) {
+        var buttonLeft   = this.x * (1 + this.viewport.scale),
+            buttonRight  = buttonLeft + this.width,
+            buttonTop    =   this.y * (1 + this.viewport.scale),
+            buttonBottom = buttonTop + this.height;
 
-      var buttonLeft   = this.x * (1 + this.viewport.scale),
-          buttonRight  = buttonLeft + this.width,
-          buttonTop    =   this.y * (1 + this.viewport.scale),
-          buttonBottom = buttonTop + this.height;
+        return (buttonLeft <= x && buttonRight >= x && buttonTop <= y && buttonBottom >= y);
 
-      return (buttonLeft <= x && buttonRight >= x && buttonTop <= y && buttonBottom >= y);
+      } else {
+        var clickCoordinates = this.viewport.translateCanvasCoordinates({x: x, y: y}),
+          turretLeft   = this.x - this.width / 2,
+          turretRight  = turretLeft + this.width,
+          turretTop    = this.y - this.height / 2,
+          turretBottom = turretTop + this.height;
+
+      return (turretLeft <= clickCoordinates.x && turretRight >= clickCoordinates.x && turretTop <= clickCoordinates.y && turretBottom >= clickCoordinates.y);
+      }
     }
 
   };
