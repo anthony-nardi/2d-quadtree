@@ -902,7 +902,7 @@ var QuadTree                   = require('./core/quadTree.js'),
 
     SHIP_RESPAWN_TIMER = 3000,
 
-    NUMBER_OF_STARTING_ASTEROIDS = 1,
+    NUMBER_OF_STARTING_ASTEROIDS = 200,
 
     map = new QuadTree({
       'width' : MAP_WIDTH,
