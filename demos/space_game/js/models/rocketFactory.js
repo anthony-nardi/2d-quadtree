@@ -136,11 +136,17 @@ function init (newRocket) {
 
   _.extend(newRocket.angle, createVector(newRocket.angle.x, newRocket.angle.y));
   
+  if (newRocket.scale) {
+    newRocket.width  = newRocket.width * newRocket.scale;
+    newRocket.height = newRocket.height * newRocket.scale;
+  }
+
   newRocket.getTarget();
 
   if (!newRocket.target) {
     return;
   }  
+  
   newRocket.on('update', newRocket.update);
   
   return newRocket;

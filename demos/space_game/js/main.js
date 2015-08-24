@@ -19,7 +19,7 @@ var QuadTree                   = require('./core/quadTree.js'),
 
     STARTING_MONEY     = 10000,
     TURRET_COST        = 1000,
-    SHIP_COST          = 3000,
+    SHIP_COST          = 1000,
     SHEILD_COST        = 5000,
     SATELLITE_COST     = 8000,
     PLANET_HIT_COST    = 500,
@@ -185,18 +185,24 @@ function init () {
     }
   });
 
-  // Player ship
-  var myShip = shipFactory({
-    'angle':{
-      'x':0.5,
-      'y':0
-    },
-    'x': planet.x,
-    'y': planet.y,
-    'quadTree': map,
-    'viewport': myViewport
-  });
+  myViewport.x = planet.x;
+  myViewport.y = planet.y;
 
+  // Player ship
+  // var myShip = shipFactory({
+  //   'angle':{
+  //     'x':0.5,
+  //     'y':0
+  //   },
+  //   'x': planet.x,
+  //   'y': planet.y,
+  //   'quadTree': map,
+  //   'viewport': myViewport
+  // });
+  
+  // map.insert(myShip);
+  // myViewport.follow(myShip);
+  
   // The money
   var money = textFactory({
     'information': function () {
@@ -257,6 +263,44 @@ function init () {
 
         map.insert(newTurret);
         
+      }
+    }
+  });
+
+  // Ship button
+  buttonFactory({
+    'img': (function () {
+      var img = new Image();
+      img.src = 'shipButton.png';
+      return img;
+    }()),
+    'y': 285,
+    'x': 35,
+    'viewport': myViewport,
+    'static': true,
+    'onClick': function () {
+
+      console.log('create ship AI');
+
+      if (money.value >= SHIP_COST) {
+
+        money.value = money.value - SHIP_COST;
+        
+        var newShip = shipFactory({
+          'angle':{
+            'x':0.5,
+            'y':0
+          },
+          'x': planet.x,
+          'y': planet.y,
+          'quadTree': map,
+          'viewport': myViewport,
+          'planet': planet,
+          'money': money
+        });
+
+        map.insert(newShip);
+
       }
     }
   });
@@ -372,11 +416,8 @@ function init () {
 
   map.insert(planet);
 
-  map.insert(myShip);
-
   myViewport.zoomBy(4000);
 
-  myViewport.follow(myShip);
 
   for (var i = 0; i < NUMBER_OF_STARTING_ASTEROIDS; i++) {
 
@@ -422,7 +463,7 @@ function init () {
 
   window.clock = clock;
 
-  events.on('playerDead', createNewPlayerShip);
+  // events.on('playerDead', createNewPlayerShip);
 
 }
 
