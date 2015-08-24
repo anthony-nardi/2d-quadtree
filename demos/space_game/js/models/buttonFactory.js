@@ -82,6 +82,11 @@ module.exports = (function () {
 
       return (turretLeft <= clickCoordinates.x && turretRight >= clickCoordinates.x && turretTop <= clickCoordinates.y && turretBottom >= clickCoordinates.y);
       }
+    },
+
+    'remove': function () {
+      this.viewport.alwaysRender.splice(this.viewport.alwaysRender.indexOf(this), 1);
+      this.off('input', this.input);
     }
 
   };

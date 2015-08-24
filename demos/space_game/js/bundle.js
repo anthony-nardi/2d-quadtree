@@ -1118,6 +1118,7 @@ function init () {
           'static'     : true,
           'viewport'   : myViewport,
           'quadTree'   : map,
+          'money'      : money,
           'onPlacement': function () {
             turretButton.isBusy = false;
           }
@@ -1630,6 +1631,11 @@ module.exports = (function () {
 
       return (turretLeft <= clickCoordinates.x && turretRight >= clickCoordinates.x && turretTop <= clickCoordinates.y && turretBottom >= clickCoordinates.y);
       }
+    },
+
+    'remove': function () {
+      this.viewport.alwaysRender.splice(this.viewport.alwaysRender.indexOf(this), 1);
+      this.off('input', this.input);
     }
 
   };
@@ -1776,7 +1782,7 @@ var rocketPrototype = {
   'z-index': 100,
   'removeNextUpdate': false,
   'angle': {},
-  'turnRate': Math.PI / 280,
+  'turnRate': Math.PI / 200,
   'maxSpeed': 10,
   'mass': 30,
   'force': 3,
@@ -1825,7 +1831,6 @@ var rocketPrototype = {
     for (var i = 0; i < collidesList.length; i += 1) {
       if (collidesList[i].isAsteroid) {
         collidesList[i].impact(this);
-        console.log('ROCKET HIT');
         this.onCollision();
         return;
       }
@@ -2438,6 +2443,9 @@ module.exports = (function () {
 
     'angle'   : {},
     'rotation': {},
+
+    'RocketUpgrade_1_Cost': 2000,
+    'BulletUpgrade_1_Cost': 1500,
     
     'mass': 30,
     'force': 1,
@@ -2567,13 +2575,13 @@ module.exports = (function () {
         'viewport': this.viewport,
         'static': false,
         'z-index': 999999999,
-        'quadTree': this.quadTree,
         'onClick': function () {
           console.log('Rocket upgrade');
-          this.viewport.alwaysRender.splice(this.viewport.alwaysRender.indexOf(bulletUpgradeButton), 1);
-          this.viewport.alwaysRender.splice(this.viewport.alwaysRender.indexOf(rocketUpgradeButton), 1);
           currentTurret.firesBullets = false;
           currentTurret.maxCooldown  = 7;
+          currentTurret.money.value -= currentTurret.RocketUpgrade_1_Cost;
+          this.remove();
+          bulletUpgradeButton.remove();
         }
       });
 
@@ -2587,13 +2595,13 @@ module.exports = (function () {
         'viewport': this.viewport,
         'static': false,
         'z-index': 999999999,
-        'quadTree': this.quadTree,
         'onClick': function () {
           console.log('Bullet upgrade');
-          this.viewport.alwaysRender.splice(this.viewport.alwaysRender.indexOf(bulletUpgradeButton), 1);
-          this.viewport.alwaysRender.splice(this.viewport.alwaysRender.indexOf(rocketUpgradeButton), 1);
           currentTurret.maxBullets = 5;
           currentTurret.maxCooldown = 1;
+          currentTurret.money.value -= currentTurret.BulletUpgrade_1_Cost;
+          this.remove();
+          rocketUpgradeButton.remove();
         }
       });
 

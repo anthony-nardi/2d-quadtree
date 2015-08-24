@@ -20,7 +20,7 @@ var rocketPrototype = {
   'z-index': 100,
   'removeNextUpdate': false,
   'angle': {},
-  'turnRate': Math.PI / 280,
+  'turnRate': Math.PI / 200,
   'maxSpeed': 10,
   'mass': 30,
   'force': 3,
@@ -69,7 +69,6 @@ var rocketPrototype = {
     for (var i = 0; i < collidesList.length; i += 1) {
       if (collidesList[i].isAsteroid) {
         collidesList[i].impact(this);
-        console.log('ROCKET HIT');
         this.onCollision();
         return;
       }

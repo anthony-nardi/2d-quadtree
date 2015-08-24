@@ -249,6 +249,7 @@ function init () {
           'static'     : true,
           'viewport'   : myViewport,
           'quadTree'   : map,
+          'money'      : money,
           'onPlacement': function () {
             turretButton.isBusy = false;
           }
