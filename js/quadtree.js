@@ -62,8 +62,8 @@ function Quadtree (options) {
   
   options = options || {};
 
-	this.maxChildren = options.maxChildren || DEFAULT_MAX_CHILDREN;
-	this.depth       = options.depth       || DEFAULT_DEPTH;
+  this.maxChildren = options.maxChildren || DEFAULT_MAX_CHILDREN;
+  this.depth       = options.depth       || DEFAULT_DEPTH;
   this.height      = options.height      || DEFAULT_HEIGHT;
   this.width       = options.width       || DEFAULT_WIDTH;
   this.halfHeight  = this.height / 2;
