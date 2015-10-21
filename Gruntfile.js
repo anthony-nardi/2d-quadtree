@@ -25,6 +25,10 @@ module.exports = function(grunt) {
 		  space_game: {
 		  	files: ['demos/space_game/js/main.js', 'demos/space_game/js/core/*.js', 'demos/space_game/js/models/*.js'],
 		  	tasks: ['browserify']
+		  },
+		  space_game_2: {
+		  	files: ['demos/space_game_2/js/main.js', 'demos/space_game_2/js/core/*.js', 'demos/space_game_2/js/models/*.js'],
+		  	tasks: ['browserify']
 		  }
 		},
     	browserify: {
@@ -39,6 +43,10 @@ module.exports = function(grunt) {
 	      space_game: {
 	      	src: ['demos/space_game/js/main.js'],
 	      	dest: 'demos/space_game/js/bundle.js'
+	      },
+	      space_game_2: {
+	      	src: ['demos/space_game_2/js/main.js'],
+	      	dest: 'demos/space_game_2/js/bundle.js'
 	      }
 	    }
 	});

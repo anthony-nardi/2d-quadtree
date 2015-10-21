@@ -241,13 +241,9 @@ module.exports = (function () {
   function resize () {
     if (toResize) {
       console.log('Resizing canvas.');
-      if (window.innerHeight < window.innerWidth) {
-        canvas.width  = window.innerHeight;
-        canvas.height = window.innerHeight;
-      } else {
-        canvas.width  = window.innerWidth;
-        canvas.height = window.innerWidth;
-      }
+
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
       toResize      = false;
     }
   }
@@ -557,40 +553,26 @@ module.exports = [,,,
 'use strict';
 
 module.exports = require('../../../../js/quadtree.js');
-},{"../../../../js/quadtree.js":24}],8:[function(require,module,exports){
+},{"../../../../js/quadtree.js":23}],8:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
 
 module.exports = (function () {
 
-  var createQuadTree    = require('./quadTree'),
-      createVector      = require('../util/math/vector'),
+  var createVector      = require('../util/math/vector'),
       fullScreenDisplay = require('./fullScreenDisplay'),
       bounds            = require('../util/math/bounds'),
-      clock             = require('./clock'),
-      viewportCounter   = 0,
       render            = true,
       resizeTimeout,
 
       viewportProto = _.extend({
 
         // PROPERTIES
-        'width'                   : 300,
-        'height'                  : 300,
-        'zIndex'                  : 0,
+        'width'                   : fullScreenDisplay.canvas.width,
+        'height'                  : fullScreenDisplay.canvas.height,
         'scale'                   : 1,
-        'angle'                   : createVector(0, 0),
-        'zoomSpeed'               : 40,
-        'speed'                   : 100,
-        'up'                      : 'h',
-        'left'                    : 'b',
-        'right'                   : 'm',
-        'down'                    : 'n',
-        'zoomDirection'           : 0,
-        'zoomIn'                  : 'i',
-        'zoomOut'                 : 'k',
-
+        'angle'                   : createVector(1, 0),
         //DISPLAY PROPERTIES
         'fullScreenDisplay'       : fullScreenDisplay,
         'fullScreenDisplayCanvas' : fullScreenDisplay.canvas,
@@ -602,6 +584,7 @@ module.exports = (function () {
           // Fullscreen to fit browser window size
           fullScreenDisplay.resize();
 
+          
           //TO DO: Actually calculate x and y fullScreenDisplay positions...
           return this;
 
@@ -653,112 +636,51 @@ module.exports = (function () {
         },
 
         'zoomBy' : function (dUnits) {
+          
           var oldHeight = this.height,
-              oldWidth = this.width;
+              oldWidth  = this.width;
+          
           this.height += dUnits;
-          this.width += dUnits * this.ratio;
+          this.width  += dUnits * this.ratio;
+          
           if (this.height < 1) {
             this.height = oldHeight;
-            this.width = oldWidth;
+            this.width  = oldWidth;
             return this;
           }
+        
           if (this.width < 1) {
             this.height = oldHeight;
-            this.width = oldWidth;
+            this.width  = oldWidth;
             return this;
           }
-          this.calculateScale();
 
+          this.calculateScale();
+          this.y -= dUnits / 2; // So it zooms from the planet center as origin
+          
           return this;
+        
         },
 
         'translateCanvasCoordinates': function (coordinates) {
 
           var x = coordinates.x,
-              y = coordinates.y;
+              y = coordinates.y,
+              posVector = createVector(x, y);
 
+          posVector.x -= this.width * this.scale * 0.5;
+          posVector.y -= this.height * this.scale;
+          
+          posVector.rotate(this.angle.toRadians());
+          
+          posVector.x += this.width * this.scale * 0.5;
+          posVector.y += this.height * this.scale;
+          
           return {
-            'x': this.bounds.left + x / this.scale,
-            'y': this.bounds.top  + y / this.scale
+            'x': this.bounds.left + posVector.x / this.scale,
+            'y': this.bounds.top  + posVector.y / this.scale
           };
 
-        },
-
-        'inputUpdate': function () {
-          var state = this.input(this.up)    * 8 +
-                      this.input(this.down)  * 2 +
-                      this.input(this.right) * 1 +
-                      this.input(this.left)  * 4;
-          switch (state) {
-            case 0:
-              this.angle.x= 0;
-              this.angle.y= 0;
-              break;
-            case 1:
-              this.angle.x= 1;
-              this.angle.y= 0;
-              break;
-            case 2:
-              this.angle.x= 0;
-              this.angle.y= 1;
-              break;
-            case 3:
-              this.angle.x= 0.7071067811865475;
-              this.angle.y= 0.7071067811865475;
-              break;
-            case 4:
-              this.angle.x= -1;
-              this.angle.y= 0;
-              break;
-            case 5:
-              this.angle.x= 0;
-              this.angle.y= 0;
-              break;
-            case 6:
-              this.angle.x= -0.7071067811865475;
-              this.angle.y= 0.7071067811865475;
-              break;
-            case 7:
-              this.angle.x= 0;
-              this.angle.y= 1;
-              break;
-            case 8:
-              this.angle.x= 0;
-              this.angle.y= -1;
-              break;
-            case 9:
-              this.angle.x= 0.7071067811865475;
-              this.angle.y= -0.7071067811865475;
-              break;
-            case 10:
-              this.angle.x= 0;
-              this.angle.y= 0;
-              break;
-            case 11:
-              this.angle.x= 1;
-              this.angle.y= 0;
-              break;
-            case 12:
-              this.angle.x= -0.7071067811865475;
-              this.angle.y= -0.7071067811865475;
-              break;
-          }
-
-          state = this.input(this.zoomIn) * 1 +
-                  this.input(this.zoomOut) * 2;
-          if (state === 1) {
-            this.zoomDirection = -1;
-            return this;
-          }
-          if (state === 2) {
-            this.zoomDirection = 1;
-            return this;
-          }
-          if (!state) {
-            this.zoomDirection = 0;
-            return this;
-          }
-          return this;
         },
 
         'render' : function (time) {
@@ -768,18 +690,19 @@ module.exports = (function () {
               renderList = _.sortBy(this.quadTree.getOrphansAndChildren().concat(this.alwaysRender), 'z-index'),//this.collidesList().concat(this.alwaysRender),
               offsetX    = this.x - this.width / 2,
               offsetY    = this.y - this.height / 2;
-
-          // console.log('~~~~~~~~~~~~~~RENDER LIST~~~~~~~~~~~~~~~~~~~~~');
-          // console.log(renderList);
-          //get bounds for render
+          
+          
           this.bounds = bounds(this);
-
+          
           renderList.splice(renderList.indexOf(this), 1);
-          // renderList = sortByProp(renderList, 'zIndex');
 
           ctx.fillStyle = '#000000';
           ctx.fillRect(0, 0, this.fullScreenDisplayCanvas.width, this.fullScreenDisplayCanvas.height);
+          ctx.save();
 
+          ctx.translate((this.rotationOrigin.x - offsetX) * scale, (this.rotationOrigin.y - offsetY) * scale);
+          ctx.rotate(-this.angle.toRadians());
+          ctx.translate(-((this.rotationOrigin.x - offsetX) * scale), -((this.rotationOrigin.y - offsetY) * scale));
           for (var i = 0; i < renderList.length; i += 1) {
             ctx.save();
             ctx.translate((renderList[i].x - offsetX) * scale, (renderList[i].y - offsetY) * scale);
@@ -789,7 +712,7 @@ module.exports = (function () {
             renderList[i].render(ctx, this, time);
             ctx.restore();
           }
-
+          ctx.restore();
           ctx.strokeStyle = '#E01B6A';
           ctx.lineWidth = '2';
           ctx.strokeRect(0, 0, this.width * scale, this.height * scale);
@@ -801,8 +724,6 @@ module.exports = (function () {
 
 
   function init (that) {
-    that.sim          = clock.UPDATE_BUFFER / 1000;
-    that.viewportName = viewportCounter += 1;
 
     window.addEventListener('resize', function () {
 
@@ -814,22 +735,22 @@ module.exports = (function () {
 
       resizeTimeout = setTimeout(function () {
 
-        that.calculateScale();
+        that.zoomBy(0);
         render = true;
 
       }, 500);
 
     }, false);
 
-    that.quadTree = that.quadTree || createQuadTree({'bounds':true});
-
     // Fullscreen to fit browser window size and set scale.
     that.calculateScale();
 
     that.quadTree.insert(that);
+
     that.forceRender = function () {
       render = true;
     };
+
     that.on('update', function () {
 
       if (this.following) {
@@ -841,9 +762,7 @@ module.exports = (function () {
 
     that.on('render', function (time) {
       if (render) {
-        //console.log('Updating viewport.');
         that.render(time);
-
       }
     });
 
@@ -853,6 +772,20 @@ module.exports = (function () {
       }
       if (inputs('x')) {
         that.zoomBy(5);
+      }
+      if (inputs('a')) {
+        // this.x += this.rotationOrigin.x * that.scale;
+        // this.y += this.rotationOrigin.y * that.scale;
+        this.angle.rotate(0.0025);
+        // this.x -= this.rotationOrigin.x * that.scale;
+        // this.y -= this.rotationOrigin.y * that.scale;
+      }
+      if (inputs('d')) {
+        this.x -= this.rotationOrigin.x * that.scale;
+        this.y -= this.rotationOrigin.y * that.scale;
+        this.angle.rotate(-0.0025);
+        this.x += this.rotationOrigin.x * that.scale;
+        this.y += this.rotationOrigin.y * that.scale;
       }
       render = true;
     });
@@ -866,17 +799,17 @@ module.exports = (function () {
   };
 
 }());
-},{"../util/math/bounds":22,"../util/math/vector":23,"./clock":1,"./fullScreenDisplay":4,"./quadTree":7,"underscore":25}],9:[function(require,module,exports){
+},{"../util/math/bounds":21,"../util/math/vector":22,"./fullScreenDisplay":4,"underscore":24}],9:[function(require,module,exports){
 'use strict';
 
-
-var QuadTree                   = require('./core/quadTree.js'),
+var _                          = require('underscore'),
+    QuadTree                   = require('./core/quadTree.js'),
     clock                      = require('./core/clock'),
-    boxFactory                 = require('./models/boxFactory'),
     asteroidFactory            = require('./models/asteroidFactory'),
     shipFactory                = require('./models/shipFactory'),
     planetFactory              = require('./models/planetFactory'),
-    events                     = require('./core/events.js'),
+    explosionFactory           = require('./models/explosionFactory'),
+
     textFactory                = require('./models/textFactory'),
     buttonFactory              = require('./models/buttonFactory'),
     turretFactory              = require('./models/turretFactory'),
@@ -898,11 +831,15 @@ var QuadTree                   = require('./core/quadTree.js'),
     MAX_ASTEROID_RADIUS = 100,
 
     MIN_ASTEROID_SPEED  = 1,
-    MAX_ASTEROID_SPEED  = 15,
+    MAX_ASTEROID_SPEED  = 10,
 
-    SHIP_RESPAWN_TIMER = 3000,
+    PLANET_X = 1200,
+    PLANET_Y = 1200,
 
-    NUMBER_OF_STARTING_ASTEROIDS = 200,
+    NUMBER_OF_STARTING_ASTEROIDS_WHITE = 100,
+    NUMBER_OF_STARTING_ASTEROIDS_BLUE  = 15, 
+    NUMBER_OF_STARTING_ASTEROIDS_RED   = 10,
+    
 
     map = new QuadTree({
       'width' : MAP_WIDTH,
@@ -912,166 +849,14 @@ var QuadTree                   = require('./core/quadTree.js'),
 function init () {
   
   var viewport = require('./core/viewport');
-
   var myViewport = viewport({
-    'quadTree': map
-  });
-    
-  // Outline quadtree
-  myViewport.addObjectToAlwaysRender(boxFactory({
-    'x'     : map.x,
-    'y'     : map.y,
-    'width' : map.width,
-    'height': map.height
-  }));
-
-  function addStarsToBackground () {
-
-    var NUMBER_OF_SMALL_STARS  = 400,
-        NUMBER_OF_MEDIUM_STARS = 200,
-        NUMBER_OF_LARGE_STARS  = 100,
-        SMALL_STAR_SIZE        = 10,
-        MEDIUM_STAR_SIZE       = 20,
-        LARGE_STAR_SIZE        = 30;     
-
-    for (var i = 0; i < NUMBER_OF_SMALL_STARS; i++) {
-      
-      var randX  = Math.getRandomInt(map.x - map.halfWidth  / 2,  map.x  + map.halfWidth / 2),
-          randY  = Math.getRandomInt(map.y - map.halfHeight / 2, map.y  + map.halfHeight / 2);
-      
-      while (isIntersectingCircles({'x':randX, 'y':randY, 'radius': SMALL_STAR_SIZE}, {'x':planet.x, 'y':planet.y, 'radius': planet.radius * 1.25})) {
-        randX = Math.getRandomInt(map.x - map.halfWidth,  map.x  + map.halfWidth);
-        randY = Math.getRandomInt(map.y - map.halfHeight, map.y  + map.halfHeight);
-      }
-
-      myViewport.addObjectToAlwaysRender({
-        'x': randX,
-        'y': randY,
-        'lastViewportX': myViewport.x,
-        'lastViewportY': myViewport.y,
-        'width': SMALL_STAR_SIZE,
-        'height': SMALL_STAR_SIZE,
-        'render': function (ctx, viewport) {
-          var scale = viewport.scale;
-          ctx.fillStyle = 'white';
-          this.x += (this.lastViewportX - myViewport.x) * scale * 0.1;
-          this.y += (this.lastViewportY - myViewport.y) * scale * 0.1;
-          this.lastViewportX = myViewport.x;
-          this.lastViewportY = myViewport.y;
-          ctx.fillRect(this.x * scale, this.y * scale, this.width * scale, this.height * scale);
-        }
-      }); 
-    }
-    for (var i = 0; i < NUMBER_OF_MEDIUM_STARS; i++) {
-      
-      var randX  = Math.getRandomInt(map.x - map.halfWidth  / 2,  map.x  + map.halfWidth / 2),
-          randY  = Math.getRandomInt(map.y - map.halfHeight / 2, map.y  + map.halfHeight / 2);
-
-      myViewport.addObjectToAlwaysRender({
-        'x': randX,
-        'y': randY,
-        'width': MEDIUM_STAR_SIZE,
-        'height': MEDIUM_STAR_SIZE,
-        'lastViewportX': myViewport.x,
-        'lastViewportY': myViewport.y,
-        'render': function (ctx, viewport) {
-          
-          var scale = viewport.scale;
-          
-          this.x += (this.lastViewportX - myViewport.x) * scale * 0.3;
-          this.y += (this.lastViewportY - myViewport.y) * scale * 0.3;
-          this.lastViewportX = myViewport.x;
-          this.lastViewportY = myViewport.y;
-
-          ctx.fillStyle = 'white';
-          
-          ctx.fillRect(this.x * scale, this.y * scale, this.width * scale, this.height * scale);
-        }
-      }); 
-    }
-    for (var i = 0; i < NUMBER_OF_LARGE_STARS; i++) {
-      
-      var randX  = Math.getRandomInt(map.x - map.halfWidth  / 2,  map.x  + map.halfWidth / 2),
-          randY  = Math.getRandomInt(map.y - map.halfHeight / 2, map.y  + map.halfHeight / 2);
-
-      myViewport.addObjectToAlwaysRender({
-        'x': randX,
-        'y': randY,
-        'width': LARGE_STAR_SIZE,
-        'height': LARGE_STAR_SIZE,
-        'lastViewportX': myViewport.x,
-        'lastViewportY': myViewport.y,
-        'render': function (ctx, viewport) {
-          var scale = viewport.scale;
-          this.x += (this.lastViewportX - myViewport.x) * scale * 0.6;
-          this.y += (this.lastViewportY - myViewport.y) * scale * 0.6;
-          this.lastViewportX = myViewport.x;
-          this.lastViewportY = myViewport.y;
-          ctx.fillStyle = 'white';
-          ctx.fillRect(this.x * scale, this.y * scale, this.width * scale, this.height * scale);
-        }
-      }); 
-    }
-  }
-
-  myViewport.addObjectToAlwaysRender({
-    'x': 0,
-    'y': 0,
-    'render': function (ctx, viewport) {
-      drawQuadtreeBoundaries(map, ctx, viewport);
+    'quadTree': map,
+    'rotationOrigin': {
+      'x': PLANET_X,
+      'y': PLANET_Y
     }
   });
 
-  function drawQuadtreeBoundaries (quadTree, ctx, viewport) {
-  
-    var l      = quadTree.children.length;
-    
-    ctx.strokeStyle = '#cf2';
-    ctx.lineWidth   = '4';
-
-    ctx.strokeRect(
-      (quadTree.x - quadTree.halfWidth)  * viewport.scale, 
-      (quadTree.y - quadTree.halfHeight) * viewport.scale, 
-      quadTree.width  * viewport.scale, 
-      quadTree.height * viewport.scale
-    );
-
-    if (!quadTree.isLeaf) {
-      for (var i = 0; i < l; i++) {
-        drawQuadtreeBoundaries(quadTree.children[i], ctx, viewport);
-      }
-    }
-  }
-
-  // The planet
-  var planet = planetFactory({
-    'x': 1200,
-    'y': 1200,
-    'health': 50000,
-    'impact': function (object) {
-      this.health -= object.mass;
-      money.value -= PLANET_HIT_COST;
-    }
-  });
-
-  myViewport.x = planet.x;
-  myViewport.y = planet.y;
-
-  // Player ship
-  // var myShip = shipFactory({
-  //   'angle':{
-  //     'x':0.5,
-  //     'y':0
-  //   },
-  //   'x': planet.x,
-  //   'y': planet.y,
-  //   'quadTree': map,
-  //   'viewport': myViewport
-  // });
-  
-  // map.insert(myShip);
-  // myViewport.follow(myShip);
-  
   // The money
   var money = textFactory({
     'information': function () {
@@ -1080,10 +865,287 @@ function init () {
     'viewport'   : myViewport,
     'color'      : '#94cd4b',
     'static'     : true,
-    'x'          : 20,
-    'y'          : 30,
+    'x'          : 200,
+    'y'          : 20,
     'font'       : '2em Georgia',
     'value'      : STARTING_MONEY
+  });
+
+  
+  var WHITE_ASTEROID_TYPE = {
+      'color': '#fff',
+      'hitsToBreak': 1
+    },
+
+    BLUE_ASTEROID_TYPE = {
+      'hitsToBreak': 3,
+      'color': '#00FFFF',
+      'speed': 0.3,
+      'onImpact': function () {
+        money.value = money.value + this.value;
+        this.radius = this.radius * 0.1;
+        this.width  = this.radius * 2;
+        this.height = this.radius * 2;
+      },
+      'customUpdate': function () {
+        this.radius = Math.min(this.radius * 1.01, MAX_ASTEROID_RADIUS);
+        this.width  = this.radius * 2;
+        this.height = this.radius * 2;
+      }
+    },
+
+    RED_ASTEROID_TYPE = {
+      'color' : '#B22222',
+      'speed' : 0.2,
+      'breaks': 0,
+      'hitsToBreak': 0,
+      'onImpact': function () {
+        money.value = money.value + this.value;
+        var newExplosion = explosionFactory({
+          'x': this.x,
+          'y': this.y,
+          'ignore': this
+        });
+
+        this.quadTree.insert(newExplosion);
+  
+      },
+    };
+
+  // The planet
+  var planet = planetFactory({
+    'x': PLANET_X,
+    'y': PLANET_Y,
+    'health': 50000,
+    'impact': function (object) {
+      this.health -= object.mass;
+    }
+  });
+
+  textFactory({
+    'information': function () {
+      return 'Planet health: ' + Math.round(planet.health);
+    },
+    'viewport'   : myViewport,
+    'color'      : '#94cd4b',
+    'static'     : true,
+    'x'          : 400,
+    'y'          : 20,
+    'font'       : '2em Georgia',
+    'value'      : 'Planet health: ' + Math.round(planet.health)
+  });
+  
+  myViewport.x = planet.x;
+  myViewport.y = planet.y - 650;
+  myViewport.zoomBy(250);
+
+
+  map.insert(planet);
+
+  generateAsteroids(WHITE_ASTEROID_TYPE, NUMBER_OF_STARTING_ASTEROIDS_WHITE);
+  generateAsteroids(BLUE_ASTEROID_TYPE, NUMBER_OF_STARTING_ASTEROIDS_BLUE);
+  generateAsteroids(RED_ASTEROID_TYPE, NUMBER_OF_STARTING_ASTEROIDS_RED);
+
+  function generateAsteroids (type, number) {
+
+    for (var i = 0; i < number; i++) {
+
+      var radius = Math.getRandomInt(MIN_ASTEROID_RADIUS, MAX_ASTEROID_RADIUS),
+          randX  = Math.getRandomInt(map.x - map.halfWidth,  map.x  + map.halfWidth),
+          randY  = Math.getRandomInt(map.y - map.halfHeight, map.y  + map.halfHeight);
+
+      // Prevent asteroids from spawning near the planet.
+      while (isIntersectingCircles({'x':randX, 'y':randY, 'radius': radius}, {'x':planet.x, 'y':planet.y, 'radius': planet.radius * 4})) {
+        console.log('trying to place asteroid in good location.');
+        randX = Math.getRandomInt(map.x - map.halfWidth,  map.x  + map.halfWidth);
+        randY = Math.getRandomInt(map.y - map.halfHeight, map.y  + map.halfHeight);
+      }
+      
+      map.insert(asteroidFactory(_.extend({
+        'radius'   : radius,
+        'quadTree' : map,
+        'speed'    : 0.5,
+        'x'        : randX,
+        'y'        : randY,
+        'value'    : ASTEROID_VALUE,
+        'onImpact' : addMoneyWhenAsteroidIsDestroyed,
+        'velocity' : {
+          'x': PLANET_X - randX,
+          'y': PLANET_Y - randY
+        }
+      }, type)));
+
+    }
+
+  }
+
+  // Asteroid count text
+  textFactory({
+    'information': function () {
+      return 'Asteroids: ' + getAsteroidCount();
+    },
+    'viewport': myViewport,
+    'color'   : '#e893ff',
+    'static'  : true,
+    'x'       : myViewport.width * myViewport.scale - 700,
+    'y'       : 20,
+    'font'    : '2em Georgia'
+  });
+
+  // Turret button
+  buttonFactory({
+    'img': (function () {
+      var img = new Image();
+      img.src = 'turretButton.png';
+      return img;
+    }()),
+    'left'       : 365,
+    'bottom'       : 15,
+    'viewport': myViewport,
+    'static'  : true,
+    'onClick' : function () {
+
+      var turretButton = this;
+      
+      if (money.value >= TURRET_COST) {
+
+        money.value = money.value - TURRET_COST;
+
+        turretButton.isBusy = true;
+
+        var newTurret = turretFactory({
+          'static'     : true,
+          'viewport'   : myViewport,
+          'quadTree'   : map,
+          'money'      : money,
+          'onPlacement': function () {
+            turretButton.isBusy = false;
+          }
+        });
+
+        map.insert(newTurret);
+        
+      }
+    }
+  });
+
+  // Ship button
+  buttonFactory({
+    'img': (function () {
+      var img = new Image();
+      img.src = 'shipButton.png';
+      return img;
+    }()),
+    'bottom': 15,
+    'left': 145,
+    'viewport': myViewport,
+    'static': true,
+    'onClick': function () {
+
+      console.log('create ship AI');
+
+      if (money.value >= SHIP_COST) {
+
+        money.value = money.value - SHIP_COST;
+        
+        var newShip = shipFactory({
+          'angle':{
+            'x':0.5,
+            'y':0
+          },
+          'x': planet.x,
+          'y': planet.y,
+          'quadTree': map,
+          'viewport': myViewport,
+          'planet': planet,
+          'money': money
+        });
+
+        map.insert(newShip);
+
+      }
+    }
+  });
+
+  // Planetary sheild button
+  buttonFactory({
+    'img': (function () {
+      var img = new Image();
+      img.src = 'sheildButton.png';
+      return img;
+    }()),
+    'left': 35,
+    'bottom': 15,
+    'viewport': myViewport,
+    'static': true,
+    'onClick' : function () {
+      
+      var sheildButton = this;
+      
+      if (sheildButton.isBusy) {
+        return;
+      }
+
+      if (money.value >= SHEILD_COST) {
+
+        money.value = money.value - SHEILD_COST;
+
+        sheildButton.isBusy = true;
+
+        map.insert(sheildFactory({
+          'x'            : planet.x,
+          'y'            : planet.y,
+          'static'       : true,
+          'viewport'     : myViewport,
+          'quadTree'     : map,
+          'maxHealth'    : 5000,
+          'currentHealth': 5000,
+          'impact': function (object) {
+            this.currentHealth -= object.mass;
+            if (this.currentHealth < 0) {
+              sheildButton.isBusy = false;
+              this.off('update');
+              this.remove();
+            }
+          },
+        }));        
+      }
+    }
+  });
+
+  // Satellite Button
+  buttonFactory({
+    'img': (function () {
+      var img = new Image();
+      img.src = 'satelliteButton.png';
+      return img;
+    }()),
+    'left'       : 255,
+    'bottom'       : 15,
+    'viewport': myViewport,
+    'static'  : true,
+    'onClick' : function () {
+
+      var satelliteButton = this;
+      
+      if (money.value >= SATELLITE_COST) {
+
+        money.value = money.value - SATELLITE_COST;
+
+        satelliteButton.isBusy = true;
+
+        map.insert(satelliteFactory({
+          'x': planet.x + planet.radius + 100,
+          'y': planet.y + planet.radius + 100,
+          'viewport': myViewport,
+          'planet': planet,
+          'onPlacement': function () {
+            satelliteButton.isBusy = false;
+          }
+        }));
+
+      }
+    }
   });
 
   // Asteroid count text
@@ -1095,7 +1157,7 @@ function init () {
     'color'   : '#e893ff',
     'static'  : true,
     'x'       : myViewport.width * myViewport.scale - 700,
-    'y'       : 30,
+    'y'       : 20,
     'font'    : '2em Georgia'
   });
 
@@ -1143,7 +1205,7 @@ function init () {
       img.src = 'shipButton.png';
       return img;
     }()),
-    'y': 285,
+    'y': 375,
     'x': 35,
     'viewport': myViewport,
     'static': true,
@@ -1182,7 +1244,7 @@ function init () {
       return img;
     }()),
     'x': 35,
-    'y': 125,
+    'y': 155,
     'viewport': myViewport,
     'static': true,
     'onClick' : function () {
@@ -1228,7 +1290,7 @@ function init () {
       return img;
     }()),
     'x'       : 35,
-    'y'       : 205,
+    'y'       : 265,
     'viewport': myViewport,
     'static'  : true,
     'onClick' : function () {
@@ -1255,75 +1317,6 @@ function init () {
     }
   });
 
-  function createNewPlayerShip () {
- 
-    setTimeout(function () {
-      
-      if (money.value >= SHIP_COST) {
-
-        money.value = money.value - SHIP_COST;
-        
-        var myShip = shipFactory({
-          'angle':{
-            'x':0.5,
-            'y':0
-          },
-          'x': planet.x,
-          'y': planet.y,
-          'quadTree': map,
-          'viewport': myViewport
-        });
-
-        map.insert(myShip);
-
-        myViewport.follow(myShip);
-
-      }
-    }, SHIP_RESPAWN_TIMER);
-
-  }
-
-  map.insert(planet);
-
-  myViewport.zoomBy(4000);
-
-
-  for (var i = 0; i < NUMBER_OF_STARTING_ASTEROIDS; i++) {
-
-    var negX   = Math.random() < 0.5,
-        negY   = Math.random() < 0.5,
-        angleX = Math.random() * (negX ? -1 : 1),
-        angleY = Math.random() * (negY ? -1 : 1),
-        radius = Math.getRandomInt(MIN_ASTEROID_RADIUS, MAX_ASTEROID_RADIUS),
-        randX  = Math.getRandomInt(map.x - map.halfWidth,  map.x  + map.halfWidth),
-        randY  = Math.getRandomInt(map.y - map.halfHeight, map.y  + map.halfHeight);
-
-    // Prevent asteroids from spawning near the planet.
-    while (isIntersectingCircles({'x':randX, 'y':randY, 'radius': radius}, {'x':planet.x, 'y':planet.y, 'radius': planet.radius * 4})) {
-      console.log('trying to place asteroid in good location.');
-      randX = Math.getRandomInt(map.x - map.halfWidth,  map.x  + map.halfWidth);
-      randY = Math.getRandomInt(map.y - map.halfHeight, map.y  + map.halfHeight);
-    }
-
-    map.insert(asteroidFactory({
-      'radius'   : radius,
-      'quadTree' : map,
-      'speed'    : Math.getRandomInt(MIN_ASTEROID_SPEED, MAX_ASTEROID_SPEED),
-      'x'        : randX,
-      'y'        : randY,
-      'value'    : ASTEROID_VALUE,
-      'onImpact' : addMoneyWhenAsteroidIsDestroyed,
-      'color'    : '#' + Math.floor(Math.random()*16777215).toString(16),
-      'angle'    : {
-        'x': angleX,
-        'y': angleY
-      }
-    }));
-
-  }
-
-  addStarsToBackground();
-
   function addMoneyWhenAsteroidIsDestroyed () {
     money.value = money.value + this.value;
   }
@@ -1332,7 +1325,6 @@ function init () {
 
   window.clock = clock;
 
-  // events.on('playerDead', createNewPlayerShip);
 
 }
 
@@ -1368,7 +1360,7 @@ if (!Math.getRandomInt) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   };
 }
-},{"./core/clock":1,"./core/events.js":2,"./core/quadTree.js":7,"./core/viewport":8,"./models/asteroidFactory":10,"./models/boxFactory":11,"./models/buttonFactory":13,"./models/planetFactory":15,"./models/satelliteFactory":17,"./models/sheildFactory":18,"./models/shipFactory":19,"./models/textFactory":20,"./models/turretFactory":21}],10:[function(require,module,exports){
+},{"./core/clock":1,"./core/quadTree.js":7,"./core/viewport":8,"./models/asteroidFactory":10,"./models/buttonFactory":12,"./models/explosionFactory":13,"./models/planetFactory":14,"./models/satelliteFactory":16,"./models/sheildFactory":17,"./models/shipFactory":18,"./models/textFactory":19,"./models/turretFactory":20,"underscore":24}],10:[function(require,module,exports){
 'use strict';
 
 var _              = require('underscore'),
@@ -1391,6 +1383,7 @@ var asteroidPrototype = {
   'angle'           : {},
   'force'           : 1,
   'maxSpeed'        : 3,
+  'hitsToBreak'     : 1,
   'value'           : 300,
   'breaks'          : 2,
   'isAsteroid'      : true,
@@ -1409,16 +1402,21 @@ var asteroidPrototype = {
       'value'   : this.value * VALUE_FACTOR,
       'color'   : this.color,
       'breaks'  : this.breaks - 1,
-      'quadTree': this.quadTree
+      'quadTree': this.quadTree,
+      'customUpdate': this.customUpdate
     };
     
-    this.removeNextUpdate = true;
+    if (this.hitsToBreak === 0) {
+      this.removeNextUpdate = true;
+    }
 
     if (this.onImpact) {
       this.onImpact();
     }
     
-    if (this.breaks > 0) {
+    this.hitsToBreak -= 1;
+
+    if (this.breaks > 0 && this.hitsToBreak === 0) {
 
       this.quadTree.insert(createAsteroid(_.extend(newAsteroid, {
         'spin'    : (Math.random() < 0.5 ? -1 : 1) * Math.getRandomInt(0, 25) / 1000,
@@ -1441,8 +1439,9 @@ var asteroidPrototype = {
   },
 
   'updatePosition': function () {
-    this.add(this.velocity);
+    this.add(this.velocity.mult(this.speed));
     this.move(this.x, this.y);
+    this.velocity.normalize();
   },
 
   'update': function () {
@@ -1454,7 +1453,9 @@ var asteroidPrototype = {
     }
     
     this.updatePosition();
-  
+    if (this.customUpdate) {
+      this.customUpdate();
+    }
   },
 
   'render': function (ctx, viewport) {
@@ -1470,8 +1471,10 @@ var asteroidPrototype = {
 function init(newAsteroid) {
 
   _.extend(newAsteroid, createVector(newAsteroid.x, newAsteroid.y));
-
-  newAsteroid.velocity = createVector(Math.random() * (Math.random() < 0.5 ? 1 : -1), Math.random() * (Math.random() < 0.5 ? 1 : -1));
+  if (!newAsteroid.velocity) {
+    newAsteroid.velocity = createVector(Math.random() * (Math.random() < 0.5 ? 1 : -1), Math.random() * (Math.random() < 0.5 ? 1 : -1));
+  }
+  newAsteroid.velocity = createVector(newAsteroid.velocity.x, newAsteroid.velocity.y).normalize();
   newAsteroid.angle    = createVector(newAsteroid.angle.x, newAsteroid.angle.y);
 
   newAsteroid.width = newAsteroid.radius  * 2;
@@ -1490,38 +1493,7 @@ function createAsteroid (config) {
 }
 
 module.exports = createAsteroid;
-},{"../core/clock":1,"../util/math/vector":23,"underscore":25}],11:[function(require,module,exports){
-'use strict';
-
-var _ = require('underscore');
-
-module.exports = (function () {
-
-  var boxPrototype = {
-    'x': 0,
-    'y': 0,
-    'width': 10,
-    'height': 10,
-    'color': 'yellow',
-    'border': 'blue',                           
-    'render': function (ctx, viewport) {
-      ctx.strokeStyle = this.color;
-      ctx.strokeRect(-this.width * viewport.scale / 2, -this.height* viewport.scale / 2, this.width * viewport.scale, this.height * viewport.scale);
-    }
-  };
-
-  function init(newBox) {
-
-    return newBox;    
-
-  } 
-
-  return function (config) {                        
-    return init(_.extend(Object.create(boxPrototype), config));
-  };
-
-}());                   
-},{"underscore":25}],12:[function(require,module,exports){
+},{"../core/clock":1,"../util/math/vector":22,"underscore":24}],11:[function(require,module,exports){
 'use strict';
 var _ = require('underscore');
 module.exports = (function () {
@@ -1587,7 +1559,7 @@ module.exports = (function () {
   };
 
 }());
-},{"../core/clock":1,"../util/math/vector":23,"underscore":25}],13:[function(require,module,exports){
+},{"../core/clock":1,"../util/math/vector":22,"underscore":24}],12:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -1675,24 +1647,31 @@ module.exports = (function () {
     },
 
     'remove': function () {
-      this.viewport.alwaysRender.splice(this.viewport.alwaysRender.indexOf(this), 1);
-      this.off('input', this.input);
+      this.img.removeEventListener('click', this.onClick);
+      document.body.removeChild(this.img);
     }
 
   };
 
   function init (newButton) {
-    newButton.viewport.addObjectToAlwaysRender(newButton);
-    newButton.on('input',  newButton.input);
+    
+    document.body.appendChild(newButton.img);
+    newButton.img.style.position = 'absolute';
+    newButton.img.style.bottom  = newButton.bottom + 'px';
+    newButton.img.style.left = newButton.left + 'px';
+    newButton.img.width = 100;  
+    newButton.img.height = 100;
+    newButton.img.style.borderRadius = '12px';
+
+    newButton.img.addEventListener('click',  newButton.onClick);
     return newButton;
   }
-
   return function (config) {
     return init(_.extend(Object.create(buttonPrototype), config));
   };
 
 }());
-},{"underscore":25}],14:[function(require,module,exports){
+},{"underscore":24}],13:[function(require,module,exports){
 'use strict';
 // https://gist.github.com/gre/1650294
 var _   = require('underscore'),
@@ -1711,6 +1690,15 @@ var explosionPrototype = {
   'outerColor'   : 'rgba(233, 75, 2, 0)',
   'totalDuration': 7000,
   'z-index'      : 9999,
+  'update': function () {
+    var collidesList = this.getCollisions();
+
+    for (var i = 0; i < collidesList.length; i += 1) {
+      if (collidesList[i].isAsteroid && this.ignore !== collidesList[i]) {
+        collidesList[i].impact(this);
+      }
+    }
+  },
   'render': function (ctx, viewport, time) {
     
     var duration = min(max((time - this.startTime) / this.totalDuration, 0), 1), 
@@ -1731,6 +1719,7 @@ var explosionPrototype = {
 
 function init(newExplosion) {
   newExplosion.startTime = Date.now();
+  newExplosion.on('update', newExplosion.update);
   return newExplosion;
 }
 
@@ -1741,19 +1730,19 @@ function createExplosion (config) {
 
 module.exports = createExplosion;
 
-},{"underscore":25}],15:[function(require,module,exports){
+},{"underscore":24}],14:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
 
 var img = new Image();
 
-img.src = './planet.png';
+img.src = './planet_2.png';
 
 img.onload = function () {
   console.log('img loaded');
-  img.width  *= 2;
-  img.height *= 2;
+  img.width  = 835 * 2;
+  img.height = 835 * 2;
 }
 
 var planetPrototype = {
@@ -1800,7 +1789,7 @@ function createPlanet (config) {
 }
 
 module.exports = createPlanet;
-},{"underscore":25}],16:[function(require,module,exports){
+},{"underscore":24}],15:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -1960,7 +1949,7 @@ function createRocket (config) {
 }
 
 module.exports = createRocket;
-},{"../util/math/vector":23,"underscore":25}],17:[function(require,module,exports){
+},{"../util/math/vector":22,"underscore":24}],16:[function(require,module,exports){
 'use strict';
 
 var _           = require('underscore'),
@@ -2021,7 +2010,7 @@ function createSatellite (config) {
 }
 
 module.exports = createSatellite;
-},{"../util/math/vector":23,"underscore":25}],18:[function(require,module,exports){
+},{"../util/math/vector":22,"underscore":24}],17:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore'),
@@ -2129,7 +2118,7 @@ function createSheild (config) {
 }
 
 module.exports = createSheild;
-},{"underscore":25}],19:[function(require,module,exports){
+},{"underscore":24}],18:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore'), 
@@ -2630,7 +2619,7 @@ module.exports = (function () {
   };
 
 }());
-},{"../core/clock":1,"../core/events.js":2,"../util/math/vector":23,"./bulletFactory":12,"./buttonFactory":13,"./explosionFactory":14,"./rocketFactory":16,"underscore":25}],20:[function(require,module,exports){
+},{"../core/clock":1,"../core/events.js":2,"../util/math/vector":22,"./bulletFactory":11,"./buttonFactory":12,"./explosionFactory":13,"./rocketFactory":15,"underscore":24}],19:[function(require,module,exports){
 'use strict';
 var _ = require('underscore');
 module.exports = (function () {
@@ -2686,8 +2675,21 @@ module.exports = (function () {
 
   };
 
+  function updateText () {
+    this.element.innerHTML = this.getText();
+  }
+
 	function init (newText) {
-		newText.viewport.addObjectToAlwaysRender(newText);
+		var spanElement = document.createElement('span');
+    spanElement.innerHTML = newText.getText();
+    spanElement.style.top = newText.y + 'px';
+    spanElement.style.left = newText.x + 'px';
+    spanElement.style.position = 'absolute';
+    spanElement.style.color = newText.color;
+    spanElement.style.font = newText.font;
+    newText.element = spanElement;
+    document.body.appendChild(spanElement);
+    newText.on('update', updateText);
     return newText;
 	}
 
@@ -2696,7 +2698,7 @@ module.exports = (function () {
 	};
 
 }());
-},{"underscore":25}],21:[function(require,module,exports){
+},{"underscore":24}],20:[function(require,module,exports){
  'use strict';
 
 var _ = require('underscore');
@@ -2796,6 +2798,40 @@ module.exports = (function () {
       this.bullets.push(this.quadTree.insert(newBullet));
     },
 
+    'fireLazer': function () {
+
+      if (this.bullets.length >= this.maxBullets) {
+        return;
+      }
+
+      var newBullet = createBullet({
+        'x': this.x,
+        'y': this.y,
+        'width': 250,
+        'height': 12,
+        'color': '#32CD32',
+        'force': 40,
+        'mass': 2,
+        'range': 3900,
+        'getRotation': function () { return this.angle.toRadians(); },
+        'angle': createVector(this.angle.y, -this.angle.x)
+      }),
+
+      that = this;
+
+      newBullet.on('update', function () {
+        if (this.traveled > this.range) {
+          that.bullets.splice(that.bullets.indexOf(newBullet, 1));
+          this.off('update');
+          newBullet.remove();
+        }
+      });
+
+      newBullet.onCollision = function () {};
+
+      this.bullets.push(this.quadTree.insert(newBullet));
+    },
+
     'fireRocket': function () {
 
       var that = this;
@@ -2866,8 +2902,8 @@ module.exports = (function () {
       
       var rocketUpgradeButton = buttonFactory({
         'img': rocketUpgradeImage_1,
-        'x': this.x - 400,
-        'y': this.y - 400,
+        'left'  : 305,
+        'bottom': 125,
         'width': 400,
         'height': 400,
         'viewport': this.viewport,
@@ -2878,16 +2914,15 @@ module.exports = (function () {
           currentTurret.firesBullets = false;
           currentTurret.maxCooldown  = 7;
           currentTurret.money.value -= currentTurret.RocketUpgrade_1_Cost;
-          this.remove();
+          rocketUpgradeButton.remove();
           bulletUpgradeButton.remove();
         }
       });
 
-
       var bulletUpgradeButton = buttonFactory({
         'img': bulletUpgradeImage_1,
-        'x': this.x + 400,
-        'y': this.y - 400,
+        'left'       : 425,
+        'bottom'       : 125,
         'width': 400,
         'height': 400,
         'viewport': this.viewport,
@@ -2895,13 +2930,33 @@ module.exports = (function () {
         'z-index': 999999999,
         'onClick': function () {
           console.log('Bullet upgrade');
-          currentTurret.maxBullets = 5;
+          currentTurret.maxBullets = 1;
           currentTurret.maxCooldown = 1;
+          currentTurret.firesLazers = true;
           currentTurret.money.value -= currentTurret.BulletUpgrade_1_Cost;
-          this.remove();
+          bulletUpgradeButton.remove();
           rocketUpgradeButton.remove();
         }
       });
+
+      // var bulletUpgradeButton = buttonFactory({
+      //   'img': bulletUpgradeImage_1,
+      //   'left'       : 425,
+      //   'bottom'       : 125,
+      //   'width': 400,
+      //   'height': 400,
+      //   'viewport': this.viewport,
+      //   'static': false,
+      //   'z-index': 999999999,
+      //   'onClick': function () {
+      //     console.log('Bullet upgrade');
+      //     currentTurret.maxBullets = 5;
+      //     currentTurret.maxCooldown = 1;
+      //     currentTurret.money.value -= currentTurret.BulletUpgrade_1_Cost;
+      //     this.remove();
+      //     rocketUpgradeButton.remove();
+      //   }
+      // });
 
       this.upgrading = true;
 
@@ -2958,7 +3013,10 @@ module.exports = (function () {
         
 
         if (this.cooldown <= 0) {
-          if (this.firesBullets) {
+          if (this.firesLazers) {
+            this.fireLazer();
+          }
+          else if (this.firesBullets) {
             this.fireBullet();
           } else {
             this.fireRocket();
@@ -3037,7 +3095,7 @@ module.exports = (function () {
   return create;
 
 }());
-},{"../core/clock":1,"../util/math/vector":23,"./bulletFactory":12,"./buttonFactory":13,"./rocketFactory":16,"underscore":25}],22:[function(require,module,exports){
+},{"../core/clock":1,"../util/math/vector":22,"./bulletFactory":11,"./buttonFactory":12,"./rocketFactory":15,"underscore":24}],21:[function(require,module,exports){
 'use strict';
 
 module.exports = function (obj) {
@@ -3053,7 +3111,7 @@ module.exports = function (obj) {
   };
 };
 
-},{}],23:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -3138,7 +3196,7 @@ module.exports = (function () {
 
 }());
 
-},{"underscore":25}],24:[function(require,module,exports){
+},{"underscore":24}],23:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -3814,7 +3872,7 @@ function forceObjectWithinBounds (object, rect) {
 }
 
 module.exports = Quadtree;
-},{"underscore":25}],25:[function(require,module,exports){
+},{"underscore":24}],24:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors

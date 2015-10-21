@@ -86,8 +86,8 @@ function Quadtree (options) {
   
   options = options || {};
 
-	this.maxChildren = options.maxChildren || DEFAULT_MAX_CHILDREN;
-	this.depth       = options.depth       || DEFAULT_DEPTH;
+  this.maxChildren = options.maxChildren || DEFAULT_MAX_CHILDREN;
+  this.depth       = options.depth       || DEFAULT_DEPTH;
   this.height      = options.height      || DEFAULT_HEIGHT;
   this.width       = options.width       || DEFAULT_WIDTH;
   this.halfHeight  = this.height / 2;
@@ -555,7 +555,7 @@ function setQuadrant (object, quadtree) {
  * @return {Boolean}        [True if it is a rectangle]
  */
 function hasRectProps (object) {
-  return typeof object.width !== 'undefined' && object.height !== 'undefined' && object.x !== 'undefined' && object.y !== 'undefined';
+  return typeof object.width !== 'undefined' && typeof object.height !== 'undefined' && typeof object.x !== 'undefined' && typeof object.y !== 'undefined';
 }
 
 /**
